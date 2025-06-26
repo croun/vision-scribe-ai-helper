@@ -253,20 +253,21 @@ const Index = () => {
             {showCropper && imagePreview ? (
               <ImageCropper 
                 imageUrl={imagePreview}
+                detectionResult={detectionResult}
                 onCropComplete={(croppedUrl) => {
-                  console.log('Cropped image created:', croppedUrl);
+                  console.log('Auto-cropped image created:', croppedUrl);
                 }}
               />
             ) : (
               <Card className="h-fit">
                 <CardHeader>
-                  <CardTitle>Object Cropper</CardTitle>
+                  <CardTitle>Auto Object Cropper</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
                     <div className="text-center space-y-2">
                       <Eye className="h-8 w-8 mx-auto text-gray-400" />
-                      <p>Analyze an image first to enable cropping</p>
+                      <p>Analyze an image first to enable auto-cropping</p>
                     </div>
                   </div>
                 </CardContent>
