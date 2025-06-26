@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageCropper } from '@/components/ImageCropper';
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
@@ -15,6 +15,7 @@ const Index = () => {
   const [imagePreview, setImagePreview] = useState<string>('');
   const [detectionResult, setDetectionResult] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -23,6 +24,7 @@ const Index = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
+        setShowCropper(false); // Reset cropper when new image is selected
       };
       reader.readAsDataURL(file);
     }
@@ -100,7 +102,8 @@ const Index = () => {
       
       if (result) {
         setDetectionResult(result);
-        toast.success('Image analysis completed!');
+        setShowCropper(true); // Show cropper after successful analysis
+        toast.success('Image analysis completed! You can now crop detected objects.');
       } else {
         throw new Error('No analysis result received');
       }
@@ -116,17 +119,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center py-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Eye className="h-8 w-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              AI Object Detection Tool
+              AI Object Detection & Cropping Tool
             </h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload an image and let AI identify and analyze all the objects within it. 
+            Upload an image, let AI identify objects, and crop them out for individual use. 
             Powered by OpenAI's advanced vision capabilities.
           </p>
         </div>
@@ -160,88 +163,116 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Image Upload */}
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Upload Image
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="image">Select an image file</Label>
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="cursor-pointer"
-                />
-              </div>
-
-              {imagePreview && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Image Upload and Analysis */}
+          <div className="space-y-6">
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload & Analyze Image
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Preview</Label>
-                  <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="w-full h-auto max-h-64 object-contain rounded"
-                    />
-                  </div>
+                  <Label htmlFor="image">Select an image file</Label>
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="cursor-pointer"
+                  />
                 </div>
-              )}
 
-              <Button 
-                onClick={analyzeImage}
-                disabled={!selectedImage || !apiKey.trim() || isAnalyzing}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                size="lg"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing Image...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Detect Objects
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Detection Results */}
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle>Detection Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {detectionResult ? (
-                <Textarea
-                  value={detectionResult}
-                  readOnly
-                  className="min-h-[300px] resize-none"
-                  placeholder="Analysis results will appear here..."
-                />
-              ) : (
-                <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                  {isAnalyzing ? (
-                    <div className="text-center space-y-2">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-                      <p>Analyzing your image...</p>
+                {imagePreview && (
+                  <div className="space-y-2">
+                    <Label>Preview</Label>
+                    <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50">
+                      <img 
+                        src={imagePreview} 
+                        alt="Preview" 
+                        className="w-full h-auto max-h-64 object-contain rounded"
+                      />
                     </div>
+                  </div>
+                )}
+
+                <Button 
+                  onClick={analyzeImage}
+                  disabled={!selectedImage || !apiKey.trim() || isAnalyzing}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  size="lg"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Analyzing Image...
+                    </>
                   ) : (
-                    <p>Upload an image and click "Detect Objects" to see results</p>
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Detect Objects
+                    </>
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Detection Results */}
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle>Detection Results</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {detectionResult ? (
+                  <Textarea
+                    value={detectionResult}
+                    readOnly
+                    className="min-h-[200px] resize-none"
+                    placeholder="Analysis results will appear here..."
+                  />
+                ) : (
+                  <div className="min-h-[200px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                    {isAnalyzing ? (
+                      <div className="text-center space-y-2">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+                        <p>Analyzing your image...</p>
+                      </div>
+                    ) : (
+                      <p>Upload an image and click "Detect Objects" to see results</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Image Cropper */}
+          <div>
+            {showCropper && imagePreview ? (
+              <ImageCropper 
+                imageUrl={imagePreview}
+                onCropComplete={(croppedUrl) => {
+                  console.log('Cropped image created:', croppedUrl);
+                }}
+              />
+            ) : (
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle>Object Cropper</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+                    <div className="text-center space-y-2">
+                      <Eye className="h-8 w-8 mx-auto text-gray-400" />
+                      <p>Analyze an image first to enable cropping</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         {/* Instructions */}
@@ -254,10 +285,11 @@ const Index = () => {
               <li>Enter your OpenAI API key in the configuration section above</li>
               <li>Upload an image file (JPG, PNG, etc.)</li>
               <li>Click "Detect Objects" to analyze the image</li>
-              <li>Review the detailed analysis results on the right</li>
+              <li>Use the cropper to select and extract detected objects</li>
+              <li>Download your cropped objects individually</li>
             </ol>
             <p className="text-sm mt-4 text-green-600">
-              The AI will identify objects, their locations, and provide detailed descriptions of what it sees in your image.
+              After analysis, click and drag on the image to select areas containing the objects you want to crop out.
             </p>
           </CardContent>
         </Card>
