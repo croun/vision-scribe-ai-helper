@@ -75,7 +75,7 @@ const Index = () => {
               content: [
                 { 
                   type: "text", 
-                  text: "Analyze this image and provide detailed object detection results. List all objects you can identify, their approximate locations, and any notable details about them. Format your response clearly." 
+                  text: "Analyze this image and provide detailed object detection results. For each object you identify, please provide:\n1. Object name/label\n2. Approximate bounding box coordinates if possible (x, y, width, height)\n3. Location description (e.g., 'top-left corner', 'center', etc.)\n\nFormat your response clearly with each object on a separate line. If you can estimate coordinates, please include them in this format: 'Object: [name] at x: [x], y: [y], width: [width], height: [height]'" 
                 },
                 {
                   type: "image_url",
@@ -102,8 +102,8 @@ const Index = () => {
       
       if (result) {
         setDetectionResult(result);
-        setShowCropper(true); // Show cropper after successful analysis
-        toast.success('Image analysis completed! You can now crop detected objects.');
+        setShowCropper(true);
+        toast.success('Image analysis completed! Objects will be automatically cropped.');
       } else {
         throw new Error('No analysis result received');
       }
