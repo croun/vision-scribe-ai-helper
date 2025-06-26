@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,9 +36,7 @@ const Index = () => {
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result as string;
-        // Remove the data:image/[type];base64, prefix
-        const base64Data = base64.split(',')[1];
-        resolve(`data:${file.type};base64,${base64Data}`);
+        resolve(base64);
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
@@ -68,14 +67,14 @@ const Index = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-4.1-2025-04-14",
           messages: [
             {
               role: "user",
               content: [
                 { 
                   type: "text", 
-                  text: "Analyze this image and provide detailed object detection results. For each object you identify, please provide:\n1. Object name/label\n2. Approximate bounding box coordinates if possible (x, y, width, height)\n3. Location description (e.g., 'top-left corner', 'center', etc.)\n\nFormat your response clearly with each object on a separate line. If you can estimate coordinates, please include them in this format: 'Object: [name] at x: [x], y: [y], width: [width], height: [height]'" 
+                  text: "Analyze this image and identify all objects. For each object, provide:\n1. Object name/label\n2. Approximate bounding box coordinates (x, y, width, height in pixels)\n3. Location description\n\nFormat each object like this:\nObject: [name] at x: [x], y: [y], width: [width], height: [height] - [location description]\n\nBe specific with coordinates and identify as many objects as possible." 
                 },
                 {
                   type: "image_url",
@@ -87,7 +86,7 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 1000,
+          max_tokens: 1500,
           temperature: 0.1
         }),
       });
@@ -286,11 +285,11 @@ const Index = () => {
               <li>Enter your OpenAI API key in the configuration section above</li>
               <li>Upload an image file (JPG, PNG, etc.)</li>
               <li>Click "Detect Objects" to analyze the image</li>
-              <li>Use the cropper to select and extract detected objects</li>
+              <li>Objects will be automatically detected and cropped</li>
               <li>Download your cropped objects individually</li>
             </ol>
             <p className="text-sm mt-4 text-green-600">
-              After analysis, click and drag on the image to select areas containing the objects you want to crop out.
+              Each detected object will be automatically cropped into a separate image that you can download.
             </p>
           </CardContent>
         </Card>

@@ -25,27 +25,31 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Parse detection results to extract object locations
+  // Parse detection results to extract object locations and coordinates
   const parseDetectionResults = useCallback((text: string): CropData[] => {
     const areas: CropData[] = [];
+    console.log('Parsing detection results:', text);
     
-    // Try to extract coordinates from common patterns in AI responses
+    // Multiple patterns to extract coordinates from AI responses
     const patterns = [
-      // Pattern for "top-left (x,y) to bottom-right (x,y)"
-      /(\w+[^:]*?).*?(?:top-?left|upper-?left|left).*?(?:\(|at|:)\s*(\d+)[,\s]+(\d+).*?(?:bottom-?right|lower-?right|right).*?(?:\(|to|:)\s*(\d+)[,\s]+(\d+)/gi,
-      // Pattern for "x: 10, y: 20, width: 100, height: 50"
-      /(\w+[^:]*?).*?x[:\s]*(\d+).*?y[:\s]*(\d+).*?width[:\s]*(\d+).*?height[:\s]*(\d+)/gi,
-      // Pattern for "located at (x, y) with size (w, h)"
-      /(\w+[^:]*?).*?(?:located|positioned).*?(?:\(|at)\s*(\d+)[,\s]+(\d+).*?(?:size|dimensions).*?(?:\()\s*(\d+)[,\s]+(\d+)/gi
+      // Pattern: "Object: [name] at x: 10, y: 20, width: 100, height: 50"
+      /Object:\s*([^a-t]+?)\s*at\s+x:\s*(\d+),?\s*y:\s*(\d+),?\s*width:\s*(\d+),?\s*height:\s*(\d+)/gi,
+      // Pattern: "x: 10, y: 20, width: 100, height: 50"
+      /([^:\n]+?).*?x:\s*(\d+).*?y:\s*(\d+).*?width:\s*(\d+).*?height:\s*(\d+)/gi,
+      // Pattern: "located at (x, y) with dimensions (w, h)"
+      /([^:\n]+?).*?(?:located|positioned).*?[\(\s](\d+),?\s*(\d+)[\)\s].*?(?:dimensions|size).*?[\(\s](\d+),?\s*(\d+)[\)\s]/gi,
+      // Pattern: "top-left (x1,y1) bottom-right (x2,y2)"
+      /([^:\n]+?).*?(?:top-?left|upper-?left).*?[\(\s](\d+),?\s*(\d+)[\)\s].*?(?:bottom-?right|lower-?right).*?[\(\s](\d+),?\s*(\d+)[\)\s]/gi
     ];
 
-    patterns.forEach(pattern => {
+    patterns.forEach((pattern, patternIndex) => {
       let match;
-      while ((match = pattern.exec(text)) !== null) {
+      const regex = new RegExp(pattern.source, pattern.flags);
+      while ((match = regex.exec(text)) !== null) {
         const label = match[1].trim();
         let x, y, width, height;
         
-        if (pattern === patterns[0]) {
+        if (patternIndex === 3) {
           // top-left to bottom-right pattern
           x = parseInt(match[2]);
           y = parseInt(match[3]);
@@ -61,44 +65,62 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
         
         if (x >= 0 && y >= 0 && width > 0 && height > 0) {
           areas.push({ x, y, width, height, label });
+          console.log(`Found object: ${label} at (${x}, ${y}) with size ${width}x${height}`);
         }
       }
     });
 
-    // If no specific coordinates found, create some default areas based on common object descriptions
-    if (areas.length === 0 && text) {
-      const objects = text.toLowerCase().match(/\b(?:person|car|dog|cat|tree|house|building|sign|book|phone|laptop|cup|bottle|chair|table|window|door)\b/g);
-      if (objects && imageRef.current) {
-        const imgWidth = imageRef.current.width;
-        const imgHeight = imageRef.current.height;
+    // If no coordinates found, create some default crop areas based on object mentions
+    if (areas.length === 0 && text && imageRef.current) {
+      console.log('No coordinates found, creating default areas');
+      const lines = text.split('\n').filter(line => line.trim());
+      const imgWidth = imageRef.current.width;
+      const imgHeight = imageRef.current.height;
+      
+      lines.slice(0, 6).forEach((line, index) => {
+        // Extract object name from line
+        const objectMatch = line.match(/(?:Object:|^)([^-:]+?)(?:\s*-|\s*:|$)/);
+        const objectName = objectMatch ? objectMatch[1].trim() : `Object ${index + 1}`;
         
-        objects.slice(0, 4).forEach((obj, index) => {
-          const gridX = (index % 2) * (imgWidth / 2) + imgWidth * 0.1;
-          const gridY = Math.floor(index / 2) * (imgHeight / 2) + imgHeight * 0.1;
-          areas.push({
-            x: gridX,
-            y: gridY,
-            width: imgWidth * 0.3,
-            height: imgHeight * 0.3,
-            label: obj
-          });
+        // Create grid-based areas
+        const cols = 3;
+        const rows = 2;
+        const cellWidth = imgWidth / cols;
+        const cellHeight = imgHeight / rows;
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        
+        const x = col * cellWidth + cellWidth * 0.1;
+        const y = row * cellHeight + cellHeight * 0.1;
+        const w = cellWidth * 0.8;
+        const h = cellHeight * 0.8;
+        
+        areas.push({
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(w),
+          height: Math.round(h),
+          label: objectName
         });
-      }
+      });
     }
 
+    console.log(`Parsed ${areas.length} areas for cropping`);
     return areas;
   }, []);
 
   // Auto-crop when detection results change
   useEffect(() => {
-    if (detectionResult && imageRef.current) {
+    if (detectionResult && imageRef.current && detectionResult.trim() && !detectionResult.includes('Analysis failed')) {
+      console.log('Starting auto-crop process');
       const areas = parseDetectionResults(detectionResult);
       setDetectedAreas(areas);
       
       if (areas.length > 0) {
+        // Small delay to ensure image is loaded
         setTimeout(() => {
           autoCropDetectedObjects(areas);
-        }, 100);
+        }, 500);
       }
     }
   }, [detectionResult, parseDetectionResults]);
@@ -106,20 +128,26 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
   const autoCropDetectedObjects = useCallback(async (areas: CropData[]) => {
     if (!imageRef.current || !canvasRef.current || areas.length === 0) return;
     
+    console.log('Auto-cropping detected objects:', areas);
     setIsProcessing(true);
     const newCroppedImages: Array<{ url: string; label: string }> = [];
     
     for (const area of areas) {
-      const croppedUrl = await cropImageArea(area);
-      if (croppedUrl) {
-        newCroppedImages.push({
-          url: croppedUrl,
-          label: area.label || `Object ${newCroppedImages.length + 1}`
-        });
-        onCropComplete?.(croppedUrl);
+      try {
+        const croppedUrl = await cropImageArea(area);
+        if (croppedUrl) {
+          newCroppedImages.push({
+            url: croppedUrl,
+            label: area.label || `Object ${newCroppedImages.length + 1}`
+          });
+          onCropComplete?.(croppedUrl);
+        }
+      } catch (error) {
+        console.error('Error cropping area:', error);
       }
     }
     
+    console.log(`Successfully cropped ${newCroppedImages.length} objects`);
     setCroppedImages(prev => [...prev, ...newCroppedImages]);
     setIsProcessing(false);
   }, [onCropComplete]);
@@ -140,36 +168,45 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
         return;
       }
 
-      // Calculate scaling factors
+      console.log('Cropping area:', cropData);
+
+      // Calculate scaling factors between displayed image and natural image
       const scaleX = image.naturalWidth / image.width;
       const scaleY = image.naturalHeight / image.height;
 
-      // Set canvas size to crop size
-      canvas.width = cropData.width * scaleX;
-      canvas.height = cropData.height * scaleY;
+      // Apply scaling to crop coordinates
+      const scaledX = cropData.x * scaleX;
+      const scaledY = cropData.y * scaleY;
+      const scaledWidth = cropData.width * scaleX;
+      const scaledHeight = cropData.height * scaleY;
 
-      // Draw cropped portion
+      // Set canvas size to the scaled crop size
+      canvas.width = scaledWidth;
+      canvas.height = scaledHeight;
+
+      // Draw the cropped portion
       ctx.drawImage(
         image,
-        cropData.x * scaleX,
-        cropData.y * scaleY,
-        cropData.width * scaleX,
-        cropData.height * scaleY,
+        scaledX,
+        scaledY,
+        scaledWidth,
+        scaledHeight,
         0,
         0,
-        canvas.width,
-        canvas.height
+        scaledWidth,
+        scaledHeight
       );
 
       // Convert to blob and create URL
       canvas.toBlob((blob) => {
         if (blob) {
           const croppedUrl = URL.createObjectURL(blob);
+          console.log('Created cropped image:', cropData.label);
           resolve(croppedUrl);
         } else {
           resolve(null);
         }
-      });
+      }, 'image/png');
     });
   }, []);
 
