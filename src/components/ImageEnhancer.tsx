@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, ShoppingBag, Package } from 'lucide-react';
+import { Download, ShoppingBag, Package, Sparkles } from 'lucide-react';
 
 interface ImageEnhancerProps {
   imageUrl: string;
@@ -13,25 +13,26 @@ interface ImageEnhancerProps {
 }
 
 export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnhancerProps) => {
-  const [backgroundType, setBackgroundType] = useState('white');
+  const [backgroundType, setBackgroundType] = useState('professional-white');
   const [imageSize, setImageSize] = useState('2048x2048');
   const [enhancedUrl, setEnhancedUrl] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Shopify-optimized background options
+  // Professional Shopify background options
   const backgroundOptions = [
-    { value: 'white', label: 'Pure White (Recommended)', color: '#FFFFFF' },
-    { value: 'transparent', label: 'Transparent PNG', color: 'transparent' },
-    { value: 'light-neutral', label: 'Light Neutral', color: '#F8F9FA' },
-    { value: 'clean-gradient', label: 'Clean Gradient', color: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)' },
+    { value: 'professional-white', label: 'Professional Pure White', color: '#FFFFFF', description: 'Clean, bright white background' },
+    { value: 'soft-white', label: 'Soft White with Shadow', color: '#FEFEFE', description: 'White with subtle product shadow' },
+    { value: 'transparent', label: 'Transparent PNG', color: 'transparent', description: 'No background (PNG format)' },
+    { value: 'light-gray', label: 'Light Gray Studio', color: '#F5F5F5', description: 'Professional studio lighting' },
+    { value: 'gradient-white', label: 'Premium White Gradient', color: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)', description: 'Subtle gradient effect' },
   ];
 
   // Shopify-optimized image sizes
   const sizeOptions = [
-    { value: '2048x2048', label: '2048×2048 (Shopify High-Res)', recommended: true },
-    { value: '1024x1024', label: '1024×1024 (Shopify Standard)' },
-    { value: '800x800', label: '800×800 (Shopify Mobile)' },
-    { value: '2000x2000', label: '2000×2000 (Shopify Plus)' },
+    { value: '2048x2048', label: '2048×2048 - Shopify High-Res', recommended: true, description: 'Best for zoom & detail' },
+    { value: '1024x1024', label: '1024×1024 - Shopify Standard', description: 'Perfect balance of quality & size' },
+    { value: '800x800', label: '800×800 - Mobile Optimized', description: 'Fast loading for mobile' },
+    { value: '2000x2000', label: '2000×2000 - Shopify Plus', description: 'Premium quality for Pro stores' },
   ];
 
   const enhanceForShopify = async () => {
@@ -48,16 +49,19 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
         canvas.height = height;
         
         if (ctx) {
-          // Set Shopify-optimized background
+          // Professional background setup
           if (backgroundType === 'transparent') {
             ctx.clearRect(0, 0, width, height);
-          } else if (backgroundType === 'white') {
+          } else if (backgroundType === 'professional-white') {
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, width, height);
-          } else if (backgroundType === 'light-neutral') {
-            ctx.fillStyle = '#F8F9FA';
+          } else if (backgroundType === 'soft-white') {
+            ctx.fillStyle = '#FEFEFE';
             ctx.fillRect(0, 0, width, height);
-          } else if (backgroundType === 'clean-gradient') {
+          } else if (backgroundType === 'light-gray') {
+            ctx.fillStyle = '#F5F5F5';
+            ctx.fillRect(0, 0, width, height);
+          } else if (backgroundType === 'gradient-white') {
             const gradient = ctx.createLinearGradient(0, 0, width, height);
             gradient.addColorStop(0, '#ffffff');
             gradient.addColorStop(1, '#f8f9fa');
@@ -65,24 +69,33 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
             ctx.fillRect(0, 0, width, height);
           }
           
-          // Calculate optimal product placement (75% of canvas for better product visibility)
-          const scale = Math.min(width / img.width, height / img.height) * 0.75;
+          // Professional product sizing (80% for better visual impact)
+          const scale = Math.min(width / img.width, height / img.height) * 0.8;
           const scaledWidth = img.width * scale;
           const scaledHeight = img.height * scale;
           
-          // Center the product image
+          // Center the product perfectly
           const x = (width - scaledWidth) / 2;
           const y = (height - scaledHeight) / 2;
           
-          // Add subtle professional shadow (except for transparent)
+          // Professional shadow effect (except for transparent)
           if (backgroundType !== 'transparent') {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-            ctx.shadowBlur = 15;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 8;
+            if (backgroundType === 'soft-white' || backgroundType === 'professional-white') {
+              // Soft professional shadow
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
+              ctx.shadowBlur = 20;
+              ctx.shadowOffsetX = 0;
+              ctx.shadowOffsetY = 12;
+            } else {
+              // Subtle shadow for other backgrounds
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+              ctx.shadowBlur = 15;
+              ctx.shadowOffsetX = 0;
+              ctx.shadowOffsetY = 8;
+            }
           }
           
-          // Draw the product image
+          // Draw the enhanced product image
           ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
           
           // Reset shadow
@@ -91,7 +104,23 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
           
-          // Convert to Shopify-optimized format
+          // Professional image enhancement
+          if (backgroundType !== 'transparent') {
+            // Subtle brightness/contrast enhancement
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+              // Slight brightness and contrast boost for professional look
+              data[i] = Math.min(255, data[i] * 1.05);     // Red
+              data[i + 1] = Math.min(255, data[i + 1] * 1.05); // Green  
+              data[i + 2] = Math.min(255, data[i + 2] * 1.05); // Blue
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+          }
+          
+          // Convert to optimized format
           canvas.toBlob((blob) => {
             if (blob) {
               const url = URL.createObjectURL(blob);
@@ -99,14 +128,14 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
               onEnhancedImage?.(url);
             }
             setIsProcessing(false);
-          }, backgroundType === 'transparent' ? 'image/png' : 'image/jpeg', 0.95);
+          }, backgroundType === 'transparent' ? 'image/png' : 'image/jpeg', 0.92);
         }
       };
       
       img.crossOrigin = 'anonymous';
       img.src = imageUrl;
     } catch (error) {
-      console.error('Shopify optimization failed:', error);
+      console.error('Professional enhancement failed:', error);
       setIsProcessing(false);
     }
   };
@@ -115,58 +144,73 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     const link = document.createElement('a');
     link.href = enhancedUrl;
     const fileExtension = backgroundType === 'transparent' ? 'png' : 'jpg';
-    link.download = `shopify-${imageName.replace(/\s+/g, '-').toLowerCase()}-${imageSize}.${fileExtension}`;
+    link.download = `shopify-ready-${imageName.replace(/\s+/g, '-').toLowerCase()}-${imageSize}.${fileExtension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const resetSettings = () => {
-    setBackgroundType('white');
+    setBackgroundType('professional-white');
     setImageSize('2048x2048');
     setEnhancedUrl('');
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Package className="h-4 w-4" />
-          Shopify Product Optimizer
+    <Card className="w-full border-2 border-blue-100">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
+        <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
+          <Sparkles className="h-5 w-5" />
+          Professional Shopify Enhancement
         </CardTitle>
+        <p className="text-sm text-blue-600">Transform your product into a professional, sales-ready image</p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <img 
-              src={imageUrl} 
-              alt="Original" 
-              className="w-full h-20 object-contain border rounded"
-            />
-            <p className="text-xs text-center text-gray-600">Original Crop</p>
-          </div>
-          <div className="space-y-2">
-            <div className="w-full h-20 border rounded bg-gray-50 flex items-center justify-center">
-              {enhancedUrl ? (
-                <img 
-                  src={enhancedUrl} 
-                  alt="Shopify Ready" 
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="text-center">
-                  <ShoppingBag className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                  <p className="text-xs text-gray-400">Shopify Ready</p>
-                </div>
-              )}
+      <CardContent className="space-y-6 p-6">
+        {/* Before/After Comparison */}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div className="relative">
+              <img 
+                src={imageUrl} 
+                alt="Original" 
+                className="w-full h-32 object-contain border-2 border-gray-200 rounded-lg bg-gray-50"
+              />
+              <div className="absolute top-2 left-2 bg-gray-800 text-white px-2 py-1 text-xs rounded font-medium">
+                BEFORE
+              </div>
             </div>
-            <p className="text-xs text-center text-gray-600">Optimized for Shopify</p>
+            <p className="text-sm text-center text-gray-600 font-medium">Original Cropped Image</p>
+          </div>
+          <div className="space-y-3">
+            <div className="relative">
+              <div className="w-full h-32 border-2 border-green-200 rounded-lg bg-white flex items-center justify-center">
+                {enhancedUrl ? (
+                  <>
+                    <img 
+                      src={enhancedUrl} 
+                      alt="Shopify Ready" 
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                    <div className="absolute top-2 left-2 bg-green-600 text-white px-2 py-1 text-xs rounded font-medium">
+                      AFTER
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center">
+                    <ShoppingBag className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                    <p className="text-sm text-green-600 font-medium">Professional Result</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-center text-green-600 font-medium">Shopify-Ready Product</p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label className="text-xs">Background Style</Label>
+        {/* Enhancement Settings */}
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-gray-700">Professional Background</Label>
             <Select value={backgroundType} onValueChange={setBackgroundType}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -174,12 +218,15 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
               <SelectContent>
                 {backgroundOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <div 
-                        className="w-4 h-4 rounded border"
+                        className="w-4 h-4 rounded border border-gray-300"
                         style={{ background: option.color }}
                       />
-                      {option.label}
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-gray-500">{option.description}</div>
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
@@ -187,8 +234,8 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs">Shopify Image Size</Label>
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-gray-700">Shopify Image Size</Label>
             <Select value={imageSize} onValueChange={setImageSize}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -197,10 +244,13 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
                 {sizeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     <div className="flex items-center justify-between w-full">
-                      <span>{option.label}</span>
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-gray-500">{option.description}</div>
+                      </div>
                       {option.recommended && (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                          Recommended
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-medium">
+                          BEST
                         </span>
                       )}
                     </div>
@@ -211,52 +261,62 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           </div>
         </div>
 
-        <div className="flex gap-2">
+        {/* Action Buttons */}
+        <div className="flex gap-3">
           <Button 
             onClick={enhanceForShopify}
-            size="sm"
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            size="lg"
+            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
             disabled={isProcessing}
           >
             {isProcessing ? (
               <>
-                <Package className="h-3 w-3 mr-1 animate-spin" />
-                Optimizing...
+                <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                Enhancing...
               </>
             ) : (
               <>
-                <Package className="h-3 w-3 mr-1" />
-                Optimize for Shopify
+                <Sparkles className="h-4 w-4 mr-2" />
+                Create Professional Image
               </>
             )}
           </Button>
           <Button 
             onClick={resetSettings}
             variant="outline"
-            size="sm"
+            size="lg"
+            className="px-6"
           >
             Reset
           </Button>
         </div>
 
+        {/* Download Section */}
         {enhancedUrl && (
-          <div className="space-y-2">
+          <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 space-y-4">
+            <div className="flex items-center gap-2 text-green-700">
+              <Package className="h-5 w-5" />
+              <span className="font-semibold">Professional Enhancement Complete!</span>
+            </div>
+            
             <Button 
               onClick={downloadShopifyImage}
-              size="sm"
-              className="w-full bg-shopify-green hover:bg-shopify-green-dark"
-              style={{ backgroundColor: '#5C6AC4', color: 'white' }}
+              size="lg"
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
             >
-              <Download className="h-3 w-3 mr-1" />
-              Download Shopify Product Image
+              <Download className="h-4 w-4 mr-2" />
+              Download Shopify-Ready Image
             </Button>
-            <div className="text-xs text-gray-500 space-y-1">
-              <p className="text-center font-medium">✅ Shopify Ready Features:</p>
-              <ul className="text-left space-y-1 pl-4">
-                <li>• High-resolution for zoom functionality</li>
-                <li>• Professional background for clean listings</li>
-                <li>• Optimized file size for fast loading</li>
-                <li>• Square format for consistent display</li>
+            
+            <div className="text-sm text-green-700 space-y-2">
+              <p className="font-semibold">✅ Professional Features Applied:</p>
+              <ul className="space-y-1 pl-4">
+                <li>• Clean, professional background perfect for sales</li>
+                <li>• High-resolution quality for product zoom</li>
+                <li>• Optimized colors and contrast for appeal</li>
+                <li>• Professional shadows and lighting effects</li>
+                <li>• Perfect square format for consistent display</li>
+                <li>• Shopify-optimized file size for fast loading</li>
               </ul>
             </div>
           </div>
