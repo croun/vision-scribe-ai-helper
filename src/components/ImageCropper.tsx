@@ -1,8 +1,8 @@
-
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Crop, Download, Loader2 } from 'lucide-react';
+import { Crop, Download, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { ImageEnhancer } from './ImageEnhancer';
 
 interface CropData {
   x: number;
@@ -19,9 +19,11 @@ interface ImageCropperProps {
 }
 
 export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: ImageCropperProps) => {
-  const [croppedImages, setCroppedImages] = useState<Array<{ url: string; label: string }>>([]);
+  const [croppedImages, setCroppedImages] = useState<Array<{ url: string; label: string; id: string }>>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [detectedAreas, setDetectedAreas] = useState<CropData[]>([]);
+  const [cropHistory, setCropHistory] = useState<Array<{ areas: CropData[]; result: string }>>([]);
+  const [selectedImageForEnhancement, setSelectedImageForEnhancement] = useState<{ url: string; label: string } | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -117,6 +119,9 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
       setDetectedAreas(areas);
       
       if (areas.length > 0) {
+        // Add to crop history for multiple cropping capability
+        setCropHistory(prev => [...prev, { areas, result: detectionResult }]);
+        
         // Small delay to ensure image is loaded
         setTimeout(() => {
           autoCropDetectedObjects(areas);
@@ -130,15 +135,17 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
     
     console.log('Auto-cropping detected objects:', areas);
     setIsProcessing(true);
-    const newCroppedImages: Array<{ url: string; label: string }> = [];
+    const newCroppedImages: Array<{ url: string; label: string; id: string }> = [];
     
     for (const area of areas) {
       try {
         const croppedUrl = await cropImageArea(area);
         if (croppedUrl) {
+          const id = `crop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           newCroppedImages.push({
             url: croppedUrl,
-            label: area.label || `Object ${newCroppedImages.length + 1}`
+            label: area.label || `Object ${newCroppedImages.length + 1}`,
+            id
           });
           onCropComplete?.(croppedUrl);
         }
@@ -223,7 +230,16 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
     croppedImages.forEach(item => URL.revokeObjectURL(item.url));
     setCroppedImages([]);
     setDetectedAreas([]);
+    setCropHistory([]);
   }, [croppedImages]);
+
+  const reprocessCropHistory = useCallback(async (historyIndex: number) => {
+    const historyItem = cropHistory[historyIndex];
+    if (historyItem) {
+      setDetectedAreas(historyItem.areas);
+      await autoCropDetectedObjects(historyItem.areas);
+    }
+  }, [cropHistory, autoCropDetectedObjects]);
 
   return (
     <div className="space-y-4">
@@ -232,6 +248,11 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
           <CardTitle className="flex items-center gap-2">
             <Crop className="h-5 w-5" />
             Auto Object Cropper
+            {cropHistory.length > 1 && (
+              <span className="text-sm font-normal text-gray-500">
+                ({cropHistory.length} crop sessions)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -266,7 +287,7 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {isProcessing && (
                 <div className="flex items-center gap-2 text-blue-600">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -278,14 +299,33 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
                 <Button 
                   onClick={clearCroppedImages}
                   variant="outline"
+                  size="sm"
                 >
+                  <RotateCcw className="h-3 w-3 mr-1" />
                   Clear All Crops
                 </Button>
+              )}
+
+              {cropHistory.length > 1 && (
+                <div className="flex gap-1">
+                  {cropHistory.map((_, index) => (
+                    <Button
+                      key={index}
+                      onClick={() => reprocessCropHistory(index)}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                    >
+                      Crop Set {index + 1}
+                    </Button>
+                  ))}
+                </div>
               )}
             </div>
 
             <p className="text-sm text-gray-600">
-              Objects are automatically detected and cropped based on AI analysis results.
+              Objects are automatically detected and cropped based on AI analysis results. 
+              {cropHistory.length > 1 && " You can reprocess previous crop sessions using the buttons above."}
             </p>
           </div>
         </CardContent>
@@ -297,9 +337,9 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
             <CardTitle>Auto-Cropped Objects ({croppedImages.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {croppedImages.map((item, index) => (
-                <div key={index} className="space-y-2">
+                <div key={item.id} className="space-y-2">
                   <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50">
                     <img 
                       src={item.url} 
@@ -310,19 +350,38 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
                   <div className="text-xs text-center text-gray-600 truncate">
                     {item.label}
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => downloadCroppedImage(item.url, item.label, index)}
-                    className="w-full"
-                  >
-                    <Download className="h-3 w-3 mr-1" />
-                    Download
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      onClick={() => downloadCroppedImage(item.url, item.label, index)}
+                      className="flex-1"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedImageForEnhancement({ url: item.url, label: item.label })}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {selectedImageForEnhancement && (
+        <ImageEnhancer
+          imageUrl={selectedImageForEnhancement.url}
+          imageName={selectedImageForEnhancement.label}
+          onEnhancedImage={(enhancedUrl) => {
+            console.log('Enhanced image created:', enhancedUrl);
+          }}
+        />
       )}
 
       <canvas ref={canvasRef} className="hidden" />
