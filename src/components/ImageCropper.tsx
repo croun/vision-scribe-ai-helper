@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Crop, Download, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { Crop, Download, RotateCcw, Sparkles, Plus } from 'lucide-react';
 import { ImageEnhancer } from './ImageEnhancer';
 
 interface CropData {
@@ -18,146 +18,79 @@ interface ImageCropperProps {
   onCropComplete?: (croppedImageUrl: string) => void;
 }
 
-export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: ImageCropperProps) => {
+export const ImageCropper = ({ imageUrl, onCropComplete }: ImageCropperProps) => {
   const [croppedImages, setCroppedImages] = useState<Array<{ url: string; label: string; id: string }>>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [detectedAreas, setDetectedAreas] = useState<CropData[]>([]);
-  const [cropHistory, setCropHistory] = useState<Array<{ areas: CropData[]; result: string }>>([]);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [currentSelection, setCurrentSelection] = useState<CropData | null>(null);
+  const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedImageForEnhancement, setSelectedImageForEnhancement] = useState<{ url: string; label: string } | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Parse detection results to extract object locations and coordinates
-  const parseDetectionResults = useCallback((text: string): CropData[] => {
-    const areas: CropData[] = [];
-    console.log('Parsing detection results:', text);
+  const getImageCoordinates = useCallback((clientX: number, clientY: number) => {
+    if (!imageRef.current || !containerRef.current) return { x: 0, y: 0 };
     
-    // Multiple patterns to extract coordinates from AI responses
-    const patterns = [
-      // Pattern: "Object: [name] at x: 10, y: 20, width: 100, height: 50"
-      /Object:\s*([^a-t]+?)\s*at\s+x:\s*(\d+),?\s*y:\s*(\d+),?\s*width:\s*(\d+),?\s*height:\s*(\d+)/gi,
-      // Pattern: "x: 10, y: 20, width: 100, height: 50"
-      /([^:\n]+?).*?x:\s*(\d+).*?y:\s*(\d+).*?width:\s*(\d+).*?height:\s*(\d+)/gi,
-      // Pattern: "located at (x, y) with dimensions (w, h)"
-      /([^:\n]+?).*?(?:located|positioned).*?[\(\s](\d+),?\s*(\d+)[\)\s].*?(?:dimensions|size).*?[\(\s](\d+),?\s*(\d+)[\)\s]/gi,
-      // Pattern: "top-left (x1,y1) bottom-right (x2,y2)"
-      /([^:\n]+?).*?(?:top-?left|upper-?left).*?[\(\s](\d+),?\s*(\d+)[\)\s].*?(?:bottom-?right|lower-?right).*?[\(\s](\d+),?\s*(\d+)[\)\s]/gi
-    ];
-
-    patterns.forEach((pattern, patternIndex) => {
-      let match;
-      const regex = new RegExp(pattern.source, pattern.flags);
-      while ((match = regex.exec(text)) !== null) {
-        const label = match[1].trim();
-        let x, y, width, height;
-        
-        if (patternIndex === 3) {
-          // top-left to bottom-right pattern
-          x = parseInt(match[2]);
-          y = parseInt(match[3]);
-          width = parseInt(match[4]) - x;
-          height = parseInt(match[5]) - y;
-        } else {
-          // direct coordinates pattern
-          x = parseInt(match[2]);
-          y = parseInt(match[3]);
-          width = parseInt(match[4]);
-          height = parseInt(match[5]);
-        }
-        
-        if (x >= 0 && y >= 0 && width > 0 && height > 0) {
-          areas.push({ x, y, width, height, label });
-          console.log(`Found object: ${label} at (${x}, ${y}) with size ${width}x${height}`);
-        }
-      }
-    });
-
-    // If no coordinates found, create some default crop areas based on object mentions
-    if (areas.length === 0 && text && imageRef.current) {
-      console.log('No coordinates found, creating default areas');
-      const lines = text.split('\n').filter(line => line.trim());
-      const imgWidth = imageRef.current.width;
-      const imgHeight = imageRef.current.height;
-      
-      lines.slice(0, 6).forEach((line, index) => {
-        // Extract object name from line
-        const objectMatch = line.match(/(?:Object:|^)([^-:]+?)(?:\s*-|\s*:|$)/);
-        const objectName = objectMatch ? objectMatch[1].trim() : `Object ${index + 1}`;
-        
-        // Create grid-based areas
-        const cols = 3;
-        const rows = 2;
-        const cellWidth = imgWidth / cols;
-        const cellHeight = imgHeight / rows;
-        const col = index % cols;
-        const row = Math.floor(index / cols);
-        
-        const x = col * cellWidth + cellWidth * 0.1;
-        const y = row * cellHeight + cellHeight * 0.1;
-        const w = cellWidth * 0.8;
-        const h = cellHeight * 0.8;
-        
-        areas.push({
-          x: Math.round(x),
-          y: Math.round(y),
-          width: Math.round(w),
-          height: Math.round(h),
-          label: objectName
-        });
-      });
-    }
-
-    console.log(`Parsed ${areas.length} areas for cropping`);
-    return areas;
+    const rect = imageRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
   }, []);
 
-  // Auto-crop when detection results change
-  useEffect(() => {
-    if (detectionResult && imageRef.current && detectionResult.trim() && !detectionResult.includes('Analysis failed')) {
-      console.log('Starting auto-crop process');
-      const areas = parseDetectionResults(detectionResult);
-      setDetectedAreas(areas);
-      
-      if (areas.length > 0) {
-        // Add to crop history for multiple cropping capability
-        setCropHistory(prev => [...prev, { areas, result: detectionResult }]);
-        
-        // Small delay to ensure image is loaded
-        setTimeout(() => {
-          autoCropDetectedObjects(areas);
-        }, 500);
-      }
-    }
-  }, [detectionResult, parseDetectionResults]);
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!imageRef.current) return;
+    
+    const coords = getImageCoordinates(e.clientX, e.clientY);
+    setSelectionStart(coords);
+    setIsSelecting(true);
+    setCurrentSelection({ x: coords.x, y: coords.y, width: 0, height: 0 });
+  }, [getImageCoordinates]);
 
-  const autoCropDetectedObjects = useCallback(async (areas: CropData[]) => {
-    if (!imageRef.current || !canvasRef.current || areas.length === 0) return;
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isSelecting || !selectionStart || !imageRef.current) return;
     
-    console.log('Auto-cropping detected objects:', areas);
-    setIsProcessing(true);
-    const newCroppedImages: Array<{ url: string; label: string; id: string }> = [];
+    const coords = getImageCoordinates(e.clientX, e.clientY);
+    const width = coords.x - selectionStart.x;
+    const height = coords.y - selectionStart.y;
     
-    for (const area of areas) {
-      try {
-        const croppedUrl = await cropImageArea(area);
-        if (croppedUrl) {
-          const id = `crop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          newCroppedImages.push({
-            url: croppedUrl,
-            label: area.label || `Object ${newCroppedImages.length + 1}`,
-            id
-          });
-          onCropComplete?.(croppedUrl);
-        }
-      } catch (error) {
-        console.error('Error cropping area:', error);
-      }
+    setCurrentSelection({
+      x: width < 0 ? coords.x : selectionStart.x,
+      y: height < 0 ? coords.y : selectionStart.y,
+      width: Math.abs(width),
+      height: Math.abs(height)
+    });
+  }, [isSelecting, selectionStart, getImageCoordinates]);
+
+  const handleMouseUp = useCallback(() => {
+    if (currentSelection && currentSelection.width > 10 && currentSelection.height > 10) {
+      // Keep the selection for cropping
+    } else {
+      setCurrentSelection(null);
     }
+    setIsSelecting(false);
+    setSelectionStart(null);
+  }, [currentSelection]);
+
+  const cropSelectedArea = useCallback(async () => {
+    if (!currentSelection || !imageRef.current || !canvasRef.current) return;
     
-    console.log(`Successfully cropped ${newCroppedImages.length} objects`);
-    setCroppedImages(prev => [...prev, ...newCroppedImages]);
-    setIsProcessing(false);
-  }, [onCropComplete]);
+    const croppedUrl = await cropImageArea(currentSelection);
+    if (croppedUrl) {
+      const id = `crop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newCroppedImage = {
+        url: croppedUrl,
+        label: `Cropped Object ${croppedImages.length + 1}`,
+        id
+      };
+      
+      setCroppedImages(prev => [...prev, newCroppedImage]);
+      onCropComplete?.(croppedUrl);
+      setCurrentSelection(null);
+    }
+  }, [currentSelection, croppedImages.length, onCropComplete]);
 
   const cropImageArea = useCallback((cropData: CropData): Promise<string | null> => {
     return new Promise((resolve) => {
@@ -174,8 +107,6 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
         resolve(null);
         return;
       }
-
-      console.log('Cropping area:', cropData);
 
       // Calculate scaling factors between displayed image and natural image
       const scaleX = image.naturalWidth / image.width;
@@ -208,7 +139,6 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
       canvas.toBlob((blob) => {
         if (blob) {
           const croppedUrl = URL.createObjectURL(blob);
-          console.log('Created cropped image:', cropData.label);
           resolve(croppedUrl);
         } else {
           resolve(null);
@@ -229,17 +159,12 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
   const clearCroppedImages = useCallback(() => {
     croppedImages.forEach(item => URL.revokeObjectURL(item.url));
     setCroppedImages([]);
-    setDetectedAreas([]);
-    setCropHistory([]);
+    setCurrentSelection(null);
   }, [croppedImages]);
 
-  const reprocessCropHistory = useCallback(async (historyIndex: number) => {
-    const historyItem = cropHistory[historyIndex];
-    if (historyItem) {
-      setDetectedAreas(historyItem.areas);
-      await autoCropDetectedObjects(historyItem.areas);
-    }
-  }, [cropHistory, autoCropDetectedObjects]);
+  const clearCurrentSelection = useCallback(() => {
+    setCurrentSelection(null);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -247,52 +172,64 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Crop className="h-5 w-5" />
-            Auto Object Cropper
-            {cropHistory.length > 1 && (
-              <span className="text-sm font-normal text-gray-500">
-                ({cropHistory.length} crop sessions)
-              </span>
-            )}
+            Manual Object Cropper
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="relative inline-block border-2 border-gray-200 rounded-lg overflow-hidden">
+            <div 
+              ref={containerRef}
+              className="relative inline-block border-2 border-gray-200 rounded-lg overflow-hidden cursor-crosshair"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
               <img
                 ref={imageRef}
                 src={imageUrl}
-                alt="Source with detected objects"
-                className="max-w-full h-auto"
+                alt="Source image for cropping"
+                className="max-w-full h-auto select-none"
                 draggable={false}
               />
               
-              {/* Show detected areas as overlays */}
-              {detectedAreas.map((area, index) => (
+              {/* Show current selection */}
+              {currentSelection && currentSelection.width > 0 && currentSelection.height > 0 && (
                 <div
-                  key={index}
-                  className="absolute border-2 border-green-500 bg-green-500 bg-opacity-20 pointer-events-none"
+                  className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20 pointer-events-none"
                   style={{
-                    left: area.x,
-                    top: area.y,
-                    width: area.width,
-                    height: area.height,
+                    left: currentSelection.x,
+                    top: currentSelection.y,
+                    width: currentSelection.width,
+                    height: currentSelection.height,
                   }}
                 >
-                  {area.label && (
-                    <div className="absolute -top-6 left-0 bg-green-500 text-white px-2 py-1 text-xs rounded">
-                      {area.label}
-                    </div>
-                  )}
+                  <div className="absolute -top-6 left-0 bg-blue-500 text-white px-2 py-1 text-xs rounded">
+                    Selection
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              {isProcessing && (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Auto-cropping detected objects...</span>
-                </div>
+              {currentSelection && currentSelection.width > 10 && currentSelection.height > 10 && (
+                <>
+                  <Button 
+                    onClick={cropSelectedArea}
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Crop Selected Area
+                  </Button>
+                  <Button 
+                    onClick={clearCurrentSelection}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Clear Selection
+                  </Button>
+                </>
               )}
               
               {croppedImages.length > 0 && (
@@ -305,27 +242,11 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
                   Clear All Crops
                 </Button>
               )}
-
-              {cropHistory.length > 1 && (
-                <div className="flex gap-1">
-                  {cropHistory.map((_, index) => (
-                    <Button
-                      key={index}
-                      onClick={() => reprocessCropHistory(index)}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                    >
-                      Crop Set {index + 1}
-                    </Button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <p className="text-sm text-gray-600">
-              Objects are automatically detected and cropped based on AI analysis results. 
-              {cropHistory.length > 1 && " You can reprocess previous crop sessions using the buttons above."}
+              Click and drag on the image to select areas you want to crop. 
+              You can create multiple crops from the same image.
             </p>
           </div>
         </CardContent>
@@ -334,7 +255,7 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
       {croppedImages.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Auto-Cropped Objects ({croppedImages.length})</CardTitle>
+            <CardTitle>Cropped Objects ({croppedImages.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -354,7 +275,7 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
                     <Button
                       size="sm"
                       onClick={() => downloadCroppedImage(item.url, item.label, index)}
-                      className="flex-1"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
                     >
                       <Download className="h-3 w-3 mr-1" />
                       Download
