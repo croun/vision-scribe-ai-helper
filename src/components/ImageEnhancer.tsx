@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,7 +56,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
         
-        const base64 = canvas.toDataURL('image/jpeg', 0.9);
+        const base64 = canvas.toDataURL('image/png', 1.0);
         resolve(base64);
       };
       
@@ -73,8 +74,11 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     setIsEnhancing(true);
     
     try {
-      // Use DALL-E 3 for image editing instead of GPT-4 vision
+      // Convert image to base64 for DALL-E 2 editing
       const base64Image = await convertImageToBase64(imageUrl);
+      
+      // Remove the data URL prefix to get just the base64 data
+      const base64Data = base64Image.replace(/^data:image\/[a-z]+;base64,/, '');
       
       const response = await fetch('https://api.openai.com/v1/images/edits', {
         method: 'POST',
@@ -83,18 +87,17 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image: base64Image,
-          prompt: "Enhance this image to match the style of a Shopify product photo. Make the product the visual focus with a clean white background, improve brightness and contrast to simulate studio lighting, sharpen the product edges for clarity, enhance color accuracy and saturation, maintain a natural look with soft shadows if applicable, and ensure the image looks polished and ready for an e-commerce storefront.",
+          image: base64Data,
+          prompt: "Enhance this image to match the style of a Shopify product photo. Focus on the following: - Make the product the visual focus. - Clean or remove the background, ideally making it white or light neutral. - Improve brightness and contrast to simulate studio lighting. - Sharpen the product edges for clarity. - Enhance color accuracy and saturation. - Maintain a natural look with soft shadows (if applicable). - Ensure the image looks polished and ready for an e-commerce storefront. Return only the enhanced version of the image.",
           n: 1,
           size: "1024x1024"
         }),
       });
 
       if (!response.ok) {
-        // If DALL-E edit fails, try with the regular canvas enhancement
-        console.log('DALL-E edit not available, using canvas enhancement');
-        await enhanceForShopify();
-        return;
+        const errorData = await response.json();
+        console.error('OpenAI API error:', errorData);
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -110,7 +113,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
 
     } catch (error) {
       console.error('OpenAI enhancement error:', error);
-      toast.error('AI enhancement not available. Using advanced canvas enhancement instead.');
+      toast.error(`AI enhancement failed: ${error instanceof Error ? error.message : 'Unknown error'}. Using advanced canvas enhancement instead.`);
       // Fallback to canvas enhancement
       await enhanceForShopify();
     } finally {
@@ -290,16 +293,16 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2 text-orange-700">
               <Wand className="h-4 w-4" />
-              AI Image Enhancement (Optional)
+              AI Image Enhancement (DALL-E 2)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="openai-key" className="text-sm">OpenAI API Key (for AI enhancement)</Label>
+              <Label htmlFor="openai-key" className="text-sm">OpenAI API Key</Label>
               <input
                 id="openai-key"
                 type="password"
-                placeholder="sk-... (optional)"
+                placeholder="sk-..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="w-full px-3 py-2 border border-orange-200 rounded-md text-sm font-mono"
@@ -314,17 +317,17 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
               {isEnhancing ? (
                 <>
                   <Wand className="h-3 w-3 mr-2 animate-pulse" />
-                  Enhancing with AI...
+                  Enhancing with DALL-E 2...
                 </>
               ) : (
                 <>
                   <Wand className="h-3 w-3 mr-2" />
-                  Try AI Enhancement
+                  Enhance with AI (DALL-E 2)
                 </>
               )}
             </Button>
             <p className="text-xs text-orange-600">
-              If AI enhancement isn't available, the advanced canvas enhancement below will be used automatically.
+              Uses DALL-E 2 to professionally enhance your cropped product image for Shopify listings.
             </p>
           </CardContent>
         </Card>
@@ -440,7 +443,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Create Professional Image
+                Create Professional Image (Canvas)
               </>
             )}
           </Button>
