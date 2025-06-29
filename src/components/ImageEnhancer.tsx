@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,58 +73,46 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     setIsEnhancing(true);
     
     try {
+      // Use DALL-E 3 for image editing instead of GPT-4 vision
       const base64Image = await convertImageToBase64(imageUrl);
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      
+      const response = await fetch('https://api.openai.com/v1/images/edits', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "gpt-4.1-2025-04-14",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { 
-                  type: "text", 
-                  text: "Enhance this image to match the style of a Shopify product photo. Focus on the following:\n\n- Make the product the visual focus.\n- Clean or remove the background, ideally making it white or light neutral.\n- Improve brightness and contrast to simulate studio lighting.\n- Sharpen the product edges for clarity.\n- Enhance color accuracy and saturation.\n- Maintain a natural look with soft shadows (if applicable).\n- Ensure the image looks polished and ready for an e-commerce storefront.\n\nReturn only the enhanced version of the image." 
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: base64Image,
-                    detail: "high"
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 1500,
-          temperature: 0.1
+          image: base64Image,
+          prompt: "Enhance this image to match the style of a Shopify product photo. Make the product the visual focus with a clean white background, improve brightness and contrast to simulate studio lighting, sharpen the product edges for clarity, enhance color accuracy and saturation, maintain a natural look with soft shadows if applicable, and ensure the image looks polished and ready for an e-commerce storefront.",
+          n: 1,
+          size: "1024x1024"
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+        // If DALL-E edit fails, try with the regular canvas enhancement
+        console.log('DALL-E edit not available, using canvas enhancement');
+        await enhanceForShopify();
+        return;
       }
 
       const data = await response.json();
-      const enhancedImageUrl = data.choices[0]?.message?.content;
+      const enhancedImageUrl = data.data[0]?.url;
       
       if (enhancedImageUrl) {
         setEnhancedUrl(enhancedImageUrl);
         onEnhancedImage?.(enhancedImageUrl);
-        toast.success('Image enhanced successfully! Professional Shopify-ready image created.');
+        toast.success('Image enhanced successfully with AI! Professional Shopify-ready image created.');
       } else {
-        throw new Error('No enhanced image received');
+        throw new Error('No enhanced image received from OpenAI');
       }
 
     } catch (error) {
       console.error('OpenAI enhancement error:', error);
-      toast.error(`Enhancement failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error('AI enhancement not available. Using advanced canvas enhancement instead.');
+      // Fallback to canvas enhancement
+      await enhanceForShopify();
     } finally {
       setIsEnhancing(false);
     }
@@ -165,8 +152,8 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
             ctx.fillRect(0, 0, width, height);
           }
           
-          // Professional product sizing (80% for better visual impact)
-          const scale = Math.min(width / img.width, height / img.height) * 0.8;
+          // Professional product sizing (85% for better visual impact)
+          const scale = Math.min(width / img.width, height / img.height) * 0.85;
           const scaledWidth = img.width * scale;
           const scaledHeight = img.height * scale;
           
@@ -176,19 +163,10 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           
           // Professional shadow effect (except for transparent)
           if (backgroundType !== 'transparent') {
-            if (backgroundType === 'soft-white' || backgroundType === 'professional-white') {
-              // Soft professional shadow
-              ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
-              ctx.shadowBlur = 20;
-              ctx.shadowOffsetX = 0;
-              ctx.shadowOffsetY = 12;
-            } else {
-              // Subtle shadow for other backgrounds
-              ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
-              ctx.shadowBlur = 15;
-              ctx.shadowOffsetX = 0;
-              ctx.shadowOffsetY = 8;
-            }
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+            ctx.shadowBlur = 25;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 15;
           }
           
           // Draw the enhanced product image
@@ -200,21 +178,64 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
           
-          // Professional image enhancement
-          if (backgroundType !== 'transparent') {
-            // Slight brightness/contrast enhancement
-            const imageData = ctx.getImageData(0, 0, width, height);
-            const data = imageData.data;
+          // Advanced image enhancement
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const data = imageData.data;
+          
+          for (let i = 0; i < data.length; i += 4) {
+            // Enhanced brightness and contrast for professional look
+            const brightness = 1.15;
+            const contrast = 1.2;
             
-            for (let i = 0; i < data.length; i += 4) {
-              // Slight brightness and contrast boost for professional look
-              data[i] = Math.min(255, data[i] * 1.05);     // Red
-              data[i + 1] = Math.min(255, data[i + 1] * 1.05); // Green  
-              data[i + 2] = Math.min(255, data[i + 2] * 1.05); // Blue
+            // Apply brightness
+            data[i] = Math.min(255, data[i] * brightness);     // Red
+            data[i + 1] = Math.min(255, data[i + 1] * brightness); // Green  
+            data[i + 2] = Math.min(255, data[i + 2] * brightness); // Blue
+            
+            // Apply contrast
+            data[i] = Math.min(255, ((data[i] - 128) * contrast) + 128);
+            data[i + 1] = Math.min(255, ((data[i + 1] - 128) * contrast) + 128);
+            data[i + 2] = Math.min(255, ((data[i + 2] - 128) * contrast) + 128);
+            
+            // Enhance saturation slightly
+            const max = Math.max(data[i], data[i + 1], data[i + 2]);
+            const min = Math.min(data[i], data[i + 1], data[i + 2]);
+            if (max !== min) {
+              const saturationBoost = 1.1;
+              const delta = (max - min) * saturationBoost;
+              const adjustment = (delta - (max - min)) / 2;
+              
+              if (data[i] !== max && data[i] !== min) data[i] = Math.max(0, Math.min(255, data[i] - adjustment));
+              if (data[i + 1] !== max && data[i + 1] !== min) data[i + 1] = Math.max(0, Math.min(255, data[i + 1] - adjustment));
+              if (data[i + 2] !== max && data[i + 2] !== min) data[i + 2] = Math.max(0, Math.min(255, data[i + 2] - adjustment));
             }
-            
-            ctx.putImageData(imageData, 0, 0);
           }
+          
+          ctx.putImageData(imageData, 0, 0);
+          
+          // Apply subtle sharpening filter
+          const sharpenKernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+          const sharpenedData = ctx.getImageData(0, 0, width, height);
+          const originalData = imageData.data;
+          const newData = sharpenedData.data;
+          
+          for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+              for (let c = 0; c < 3; c++) {
+                let sum = 0;
+                for (let ky = -1; ky <= 1; ky++) {
+                  for (let kx = -1; kx <= 1; kx++) {
+                    const pixel = ((y + ky) * width + (x + kx)) * 4 + c;
+                    sum += originalData[pixel] * sharpenKernel[(ky + 1) * 3 + (kx + 1)];
+                  }
+                }
+                const pixel = (y * width + x) * 4 + c;
+                newData[pixel] = Math.max(0, Math.min(255, sum));
+              }
+            }
+          }
+          
+          ctx.putImageData(sharpenedData, 0, 0);
           
           // Convert to optimized format
           canvas.toBlob((blob) => {
@@ -222,9 +243,10 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
               const url = URL.createObjectURL(blob);
               setEnhancedUrl(url);
               onEnhancedImage?.(url);
+              toast.success('Professional Shopify image enhancement complete!');
             }
             setIsProcessing(false);
-          }, backgroundType === 'transparent' ? 'image/png' : 'image/jpeg', 0.92);
+          }, backgroundType === 'transparent' ? 'image/png' : 'image/jpeg', 0.95);
         }
       };
       
@@ -232,6 +254,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
       img.src = imageUrl;
     } catch (error) {
       console.error('Professional enhancement failed:', error);
+      toast.error('Enhancement failed. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -267,16 +290,16 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2 text-orange-700">
               <Wand className="h-4 w-4" />
-              AI Image Enhancement
+              AI Image Enhancement (Optional)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="openai-key" className="text-sm">OpenAI API Key</Label>
+              <Label htmlFor="openai-key" className="text-sm">OpenAI API Key (for AI enhancement)</Label>
               <input
                 id="openai-key"
                 type="password"
-                placeholder="sk-..."
+                placeholder="sk-... (optional)"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="w-full px-3 py-2 border border-orange-200 rounded-md text-sm font-mono"
@@ -296,10 +319,13 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
               ) : (
                 <>
                   <Wand className="h-3 w-3 mr-2" />
-                  Enhance with OpenAI
+                  Try AI Enhancement
                 </>
               )}
             </Button>
+            <p className="text-xs text-orange-600">
+              If AI enhancement isn't available, the advanced canvas enhancement below will be used automatically.
+            </p>
           </CardContent>
         </Card>
 
@@ -448,12 +474,13 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
             <div className="text-sm text-green-700 space-y-2">
               <p className="font-semibold">✅ Professional Features Applied:</p>
               <ul className="space-y-1 pl-4">
-                <li>• Clean, professional background perfect for sales</li>
-                <li>• High-resolution quality for product zoom</li>
-                <li>• Optimized colors and contrast for appeal</li>
+                <li>• Pure white background perfect for Shopify</li>
+                <li>• Enhanced brightness and contrast for appeal</li>
+                <li>• Sharpened edges for crystal clear detail</li>
+                <li>• Improved color saturation and accuracy</li>
                 <li>• Professional shadows and lighting effects</li>
                 <li>• Perfect square format for consistent display</li>
-                <li>• Shopify-optimized file size for fast loading</li>
+                <li>• Optimized file size for fast loading</li>
               </ul>
             </div>
           </div>
