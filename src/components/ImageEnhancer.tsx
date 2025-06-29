@@ -1,10 +1,11 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, ShoppingBag, Package, Sparkles } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Download, ShoppingBag, Package, Sparkles, Eye, Wand } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ImageEnhancerProps {
   imageUrl: string;
@@ -17,6 +18,9 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
   const [imageSize, setImageSize] = useState('2048x2048');
   const [enhancedUrl, setEnhancedUrl] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
+  const [apiKey, setApiKey] = useState('');
 
   // Professional Shopify background options
   const backgroundOptions = [
@@ -34,6 +38,69 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     { value: '800x800', label: '800×800 - Mobile Optimized', description: 'Fast loading for mobile' },
     { value: '2000x2000', label: '2000×2000 - Shopify Plus', description: 'Premium quality for Pro stores' },
   ];
+
+  const analyzeWithOpenAI = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Please enter your OpenAI API key');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-2025-04-14",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { 
+                  type: "text", 
+                  text: "Analyze this product image for Shopify e-commerce optimization. Provide:\n1. Product identification and category\n2. Current image quality assessment\n3. Specific recommendations for Shopify optimization (lighting, background, positioning)\n4. Suggested product title and description for maximum sales appeal\n5. Color and contrast adjustments needed\n6. Overall professional enhancement suggestions\n\nBe specific and actionable for e-commerce success." 
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: imageUrl,
+                    detail: "high"
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 1500,
+          temperature: 0.1
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const analysis = data.choices[0]?.message?.content;
+      
+      if (analysis) {
+        setAiAnalysis(analysis);
+        toast.success('AI analysis completed! Check the recommendations below.');
+      } else {
+        throw new Error('No analysis result received');
+      }
+
+    } catch (error) {
+      console.error('OpenAI analysis error:', error);
+      toast.error(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const enhanceForShopify = async () => {
     setIsProcessing(true);
@@ -154,6 +221,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     setBackgroundType('professional-white');
     setImageSize('2048x2048');
     setEnhancedUrl('');
+    setAiAnalysis('');
   };
 
   return (
@@ -161,11 +229,63 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
       <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
         <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
           <Sparkles className="h-5 w-5" />
-          Professional Shopify Enhancement
+          AI-Powered Shopify Enhancement
         </CardTitle>
-        <p className="text-sm text-blue-600">Transform your product into a professional, sales-ready image</p>
+        <p className="text-sm text-blue-600">Let AI analyze and optimize your product for maximum sales appeal</p>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
+        {/* OpenAI Integration */}
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-orange-700">
+              <Eye className="h-4 w-4" />
+              AI Product Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="openai-key" className="text-sm">OpenAI API Key</Label>
+              <input
+                id="openai-key"
+                type="password"
+                placeholder="sk-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full px-3 py-2 border border-orange-200 rounded-md text-sm font-mono"
+              />
+            </div>
+            <Button 
+              onClick={analyzeWithOpenAI}
+              disabled={!apiKey.trim() || isAnalyzing}
+              size="sm"
+              className="w-full bg-orange-600 hover:bg-orange-700"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Eye className="h-3 w-3 mr-2 animate-pulse" />
+                  Analyzing Product...
+                </>
+              ) : (
+                <>
+                  <Wand className="h-3 w-3 mr-2" />
+                  Get AI Enhancement Tips
+                </>
+              )}
+            </Button>
+            
+            {aiAnalysis && (
+              <div className="mt-3 p-3 bg-white border border-orange-200 rounded-md">
+                <Label className="text-sm font-semibold text-orange-700 mb-2 block">AI Recommendations:</Label>
+                <Textarea
+                  value={aiAnalysis}
+                  readOnly
+                  className="min-h-[150px] text-sm resize-none border-orange-200"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Before/After Comparison */}
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-3">
