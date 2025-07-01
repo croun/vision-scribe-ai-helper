@@ -17,7 +17,7 @@ export const OpenAIKeyInput = ({ apiKey, setApiKey, onEnhance, isEnhancing }: Op
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2 text-orange-700">
           <Wand className="h-4 w-4" />
-          AI Image Enhancement (DALL-E 2)
+          Conservative AI Enhancement (DALL-E 2)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -41,17 +41,17 @@ export const OpenAIKeyInput = ({ apiKey, setApiKey, onEnhance, isEnhancing }: Op
           {isEnhancing ? (
             <>
               <Wand className="h-3 w-3 mr-2 animate-pulse" />
-              Enhancing with DALL-E 2...
+              Enhancing (Preserving Details)...
             </>
           ) : (
             <>
               <Wand className="h-3 w-3 mr-2" />
-              Enhance with AI (DALL-E 2)
+              Enhance (Keep Original Look)
             </>
           )}
         </Button>
         <p className="text-xs text-orange-600">
-          Uses DALL-E 2 to professionally enhance your cropped product image for Shopify listings.
+          Uses DALL-E 2 to subtly enhance your image while preserving all original details and characteristics.
         </p>
       </CardContent>
     </Card>

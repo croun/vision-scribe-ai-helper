@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,20 +50,57 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     
     try {
       const base64Image = await convertImageToBase64(imageUrl);
-      const base64Data = base64Image.replace(/^data:image\/[a-z]+;base64,/, '');
+      
+      // Create a simple white background mask for the edit
+      const maskCanvas = document.createElement('canvas');
+      const maskCtx = maskCanvas.getContext('2d');
+      const img = new Image();
+      
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.src = imageUrl;
+      });
+      
+      maskCanvas.width = img.width;
+      maskCanvas.height = img.height;
+      
+      if (maskCtx) {
+        // Create a minimal mask - just around the edges for background cleanup
+        maskCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+        
+        // Keep the center area (product) mostly untouched
+        maskCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        const centerX = maskCanvas.width * 0.2;
+        const centerY = maskCanvas.height * 0.2;
+        const centerWidth = maskCanvas.width * 0.6;
+        const centerHeight = maskCanvas.height * 0.6;
+        maskCtx.fillRect(centerX, centerY, centerWidth, centerHeight);
+      }
+      
+      const maskBase64 = maskCanvas.toDataURL('image/png');
+      
+      // Prepare form data for the API call
+      const formData = new FormData();
+      
+      // Convert base64 to blob for the original image
+      const originalBlob = await fetch(base64Image).then(r => r.blob());
+      formData.append('image', originalBlob, 'image.png');
+      
+      // Convert mask to blob
+      const maskBlob = await fetch(maskBase64).then(r => r.blob());
+      formData.append('mask', maskBlob, 'mask.png');
+      
+      formData.append('prompt', `Clean white background product photo. Keep the product EXACTLY as it is - same colors, same lighting, same details. Only clean up the background to be pure white and professional. Maintain all product details and characteristics. Subtle enhancement only.`);
+      formData.append('n', '1');
+      formData.append('size', '1024x1024');
       
       const response = await fetch('https://api.openai.com/v1/images/edits', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          image: base64Data,
-          prompt: "Enhance this image to match the style of a Shopify product photo. Focus on the following: - Make the product the visual focus. - Clean or remove the background, ideally making it white or light neutral. - Improve brightness and contrast to simulate studio lighting. - Sharpen the product edges for clarity. - Enhance color accuracy and saturation. - Maintain a natural look with soft shadows (if applicable). - Ensure the image looks polished and ready for an e-commerce storefront. Return only the enhanced version of the image.",
-          n: 1,
-          size: "1024x1024"
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -79,7 +115,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
       if (enhancedImageUrl) {
         setEnhancedUrl(enhancedImageUrl);
         onEnhancedImage?.(enhancedImageUrl);
-        toast.success('Image enhanced successfully with AI! Professional Shopify-ready image created.');
+        toast.success('Image enhanced with AI while preserving original details!');
       } else {
         throw new Error('No enhanced image received from OpenAI');
       }
