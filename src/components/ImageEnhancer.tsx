@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,15 +8,16 @@ import { OpenAIKeyInput } from './ImageEnhancer/OpenAIKeyInput';
 import { ImageComparison } from './ImageEnhancer/ImageComparison';
 import { EnhancementSettings } from './ImageEnhancer/EnhancementSettings';
 import { SuccessSection } from './ImageEnhancer/SuccessSection';
-import { convertImageToBase64, enhanceImageWithCanvas } from './ImageEnhancer/imageUtils';
+import { convertImageToBase64, enhanceImageWithCanvas, searchSimilarProduct } from './ImageEnhancer/imageUtils';
 
 interface ImageEnhancerProps {
   imageUrl: string;
   imageName: string;
+  detectionResult?: string;
   onEnhancedImage?: (enhancedUrl: string) => void;
 }
 
-export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnhancerProps) => {
+export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhancedImage }: ImageEnhancerProps) => {
   const [backgroundType, setBackgroundType] = useState('professional-white');
   const [imageSize, setImageSize] = useState('2048x2048');
   const [enhancedUrl, setEnhancedUrl] = useState<string>('');
@@ -40,93 +42,75 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
     { value: '2000x2000', label: '2000×2000 - Shopify Plus', description: 'Premium quality for Pro stores' },
   ];
 
-  const enhanceWithOpenAI = async () => {
+  const enhanceWithOnlineSearch = async () => {
     if (!apiKey.trim()) {
       toast.error('Please enter your OpenAI API key');
+      return;
+    }
+
+    if (!detectionResult) {
+      toast.error('No object detection results available. Please analyze the image first.');
       return;
     }
 
     setIsEnhancing(true);
     
     try {
-      const base64Image = await convertImageToBase64(imageUrl);
+      // Extract product information from detection results
+      const productInfo = extractProductInfo(detectionResult);
+      console.log('Extracted product info:', productInfo);
       
-      // Create a simple white background mask for the edit
-      const maskCanvas = document.createElement('canvas');
-      const maskCtx = maskCanvas.getContext('2d');
-      const img = new Image();
-      
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.src = imageUrl;
-      });
-      
-      maskCanvas.width = img.width;
-      maskCanvas.height = img.height;
-      
-      if (maskCtx) {
-        // Create a minimal mask - just around the edges for background cleanup
-        maskCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-        
-        // Keep the center area (product) mostly untouched
-        maskCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        const centerX = maskCanvas.width * 0.2;
-        const centerY = maskCanvas.height * 0.2;
-        const centerWidth = maskCanvas.width * 0.6;
-        const centerHeight = maskCanvas.height * 0.6;
-        maskCtx.fillRect(centerX, centerY, centerWidth, centerHeight);
-      }
-      
-      const maskBase64 = maskCanvas.toDataURL('image/png');
-      
-      // Prepare form data for the API call
-      const formData = new FormData();
-      
-      // Convert base64 to blob for the original image
-      const originalBlob = await fetch(base64Image).then(r => r.blob());
-      formData.append('image', originalBlob, 'image.png');
-      
-      // Convert mask to blob
-      const maskBlob = await fetch(maskBase64).then(r => r.blob());
-      formData.append('mask', maskBlob, 'mask.png');
-      
-      formData.append('prompt', `Clean white background product photo. Keep the product EXACTLY as it is - same colors, same lighting, same details. Only clean up the background to be pure white and professional. Maintain all product details and characteristics. Subtle enhancement only.`);
-      formData.append('n', '1');
-      formData.append('size', '1024x1024');
-      
-      const response = await fetch('https://api.openai.com/v1/images/edits', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('OpenAI API error:', errorData);
-        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+      if (!productInfo) {
+        throw new Error('Could not extract product information from detection results');
       }
 
-      const data = await response.json();
-      const enhancedImageUrl = data.data[0]?.url;
+      // Search for similar product online
+      const searchResult = await searchSimilarProduct(productInfo, apiKey);
       
-      if (enhancedImageUrl) {
-        setEnhancedUrl(enhancedImageUrl);
-        onEnhancedImage?.(enhancedImageUrl);
-        toast.success('Image enhanced with AI while preserving original details!');
+      if (searchResult) {
+        setEnhancedUrl(searchResult);
+        onEnhancedImage?.(searchResult);
+        toast.success('Found similar product image online!');
       } else {
-        throw new Error('No enhanced image received from OpenAI');
+        throw new Error('No similar product found online');
       }
 
     } catch (error) {
-      console.error('OpenAI enhancement error:', error);
-      toast.error(`AI enhancement failed: ${error instanceof Error ? error.message : 'Unknown error'}. Using advanced canvas enhancement instead.`);
+      console.error('Online search enhancement error:', error);
+      toast.error(`Online search failed: ${error instanceof Error ? error.message : 'Unknown error'}. Using advanced canvas enhancement instead.`);
       await enhanceForShopify();
     } finally {
       setIsEnhancing(false);
     }
+  };
+
+  const extractProductInfo = (detectionText: string): string | null => {
+    // Extract the main product/object from detection results
+    const lines = detectionText.split('\n');
+    const objectLines = lines.filter(line => 
+      line.toLowerCase().includes('object:') || 
+      line.toLowerCase().includes('product:') ||
+      line.toLowerCase().includes('item:')
+    );
+    
+    if (objectLines.length === 0) {
+      // Try to find any meaningful product description
+      const meaningfulLines = lines.filter(line => 
+        line.trim().length > 10 && 
+        !line.toLowerCase().includes('coordinate') &&
+        !line.toLowerCase().includes('pixel') &&
+        !line.toLowerCase().includes('location')
+      );
+      
+      if (meaningfulLines.length > 0) {
+        return meaningfulLines[0].replace(/^(Object:|Product:|Item:)/i, '').trim();
+      }
+      return null;
+    }
+    
+    // Get the first detected object and clean it up
+    const firstObject = objectLines[0];
+    return firstObject.replace(/^(Object:|Product:|Item:)/i, '').split(' at ')[0].trim();
   };
 
   const enhanceForShopify = async () => {
@@ -166,15 +150,15 @@ export const ImageEnhancer = ({ imageUrl, imageName, onEnhancedImage }: ImageEnh
       <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
         <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
           <Sparkles className="h-5 w-5" />
-          AI-Powered Shopify Enhancement
+          AI-Powered Product Enhancement
         </CardTitle>
-        <p className="text-sm text-blue-600">Transform your cropped image into a professional Shopify product photo</p>
+        <p className="text-sm text-blue-600">Find similar products online or enhance with professional backgrounds</p>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
         <OpenAIKeyInput
           apiKey={apiKey}
           setApiKey={setApiKey}
-          onEnhance={enhanceWithOpenAI}
+          onEnhance={enhanceWithOnlineSearch}
           isEnhancing={isEnhancing}
         />
 

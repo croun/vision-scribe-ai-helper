@@ -18,7 +18,7 @@ interface ImageCropperProps {
   onCropComplete?: (croppedImageUrl: string) => void;
 }
 
-export const ImageCropper = ({ imageUrl, onCropComplete }: ImageCropperProps) => {
+export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: ImageCropperProps) => {
   const [croppedImages, setCroppedImages] = useState<Array<{ url: string; label: string; id: string }>>([]);
   const [isSelecting, setIsSelecting] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<CropData | null>(null);
@@ -299,6 +299,7 @@ export const ImageCropper = ({ imageUrl, onCropComplete }: ImageCropperProps) =>
         <ImageEnhancer
           imageUrl={selectedImageForEnhancement.url}
           imageName={selectedImageForEnhancement.label}
+          detectionResult={detectionResult}
           onEnhancedImage={(enhancedUrl) => {
             console.log('Enhanced image created:', enhancedUrl);
           }}

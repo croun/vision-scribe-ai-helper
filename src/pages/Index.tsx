@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,7 +73,7 @@ const Index = () => {
               content: [
                 { 
                   type: "text", 
-                  text: "Analyze this image and identify all objects. For each object, provide:\n1. Object name/label\n2. Approximate bounding box coordinates (x, y, width, height in pixels)\n3. Location description\n\nFormat each object like this:\nObject: [name] at x: [x], y: [y], width: [width], height: [height] - [location description]\n\nBe specific with coordinates and identify as many objects as possible." 
+                  text: "Analyze this image and identify the main product/object. Provide:\n1. Primary product name/description\n2. Product category\n3. Key visual characteristics\n4. Brand or style if visible\n\nFocus on the most prominent product in the image. Format like this:\nProduct: [detailed product name and description]\nCategory: [product category]\nCharacteristics: [key visual features]\nStyle: [brand/style if visible]" 
                 },
                 {
                   type: "image_url",
@@ -102,7 +101,7 @@ const Index = () => {
       if (result) {
         setDetectionResult(result);
         setShowCropper(true);
-        toast.success('Image analysis completed! Objects will be automatically cropped.');
+        toast.success('Product analysis completed! You can now crop and enhance your image.');
       } else {
         throw new Error('No analysis result received');
       }
@@ -124,11 +123,11 @@ const Index = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Eye className="h-8 w-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              AI Object Detection & Cropping Tool
+              AI Product Detection & Enhancement Tool
             </h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload an image, let AI identify objects, and crop them out for individual use. 
+            Upload an image, let AI identify products, crop them out, and find similar high-quality versions online. 
             Powered by OpenAI's advanced vision capabilities.
           </p>
         </div>
@@ -169,12 +168,12 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Upload & Analyze Image
+                  Upload & Analyze Product
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="image">Select an image file</Label>
+                  <Label htmlFor="image">Select a product image file</Label>
                   <Input
                     id="image"
                     type="file"
@@ -206,12 +205,12 @@ const Index = () => {
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Analyzing Image...
+                      Analyzing Product...
                     </>
                   ) : (
                     <>
                       <Eye className="h-4 w-4 mr-2" />
-                      Detect Objects
+                      Detect Product
                     </>
                   )}
                 </Button>
@@ -221,7 +220,7 @@ const Index = () => {
             {/* Detection Results */}
             <Card className="h-fit">
               <CardHeader>
-                <CardTitle>Detection Results</CardTitle>
+                <CardTitle>Product Analysis Results</CardTitle>
               </CardHeader>
               <CardContent>
                 {detectionResult ? (
@@ -229,17 +228,17 @@ const Index = () => {
                     value={detectionResult}
                     readOnly
                     className="min-h-[200px] resize-none"
-                    placeholder="Analysis results will appear here..."
+                    placeholder="Product analysis results will appear here..."
                   />
                 ) : (
                   <div className="min-h-[200px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
                     {isAnalyzing ? (
                       <div className="text-center space-y-2">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-                        <p>Analyzing your image...</p>
+                        <p>Analyzing your product...</p>
                       </div>
                     ) : (
-                      <p>Upload an image and click "Detect Objects" to see results</p>
+                      <p>Upload a product image and click "Detect Product" to see results</p>
                     )}
                   </div>
                 )}
@@ -247,26 +246,26 @@ const Index = () => {
             </Card>
           </div>
 
-          {/* Image Cropper */}
+          {/* Product Enhancer */}
           <div>
             {showCropper && imagePreview ? (
               <ImageCropper 
                 imageUrl={imagePreview}
                 detectionResult={detectionResult}
                 onCropComplete={(croppedUrl) => {
-                  console.log('Auto-cropped image created:', croppedUrl);
+                  console.log('Cropped product image created:', croppedUrl);
                 }}
               />
             ) : (
               <Card className="h-fit">
                 <CardHeader>
-                  <CardTitle>Auto Object Cropper</CardTitle>
+                  <CardTitle>Product Enhancer</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
                     <div className="text-center space-y-2">
                       <Eye className="h-8 w-8 mx-auto text-gray-400" />
-                      <p>Analyze an image first to enable auto-cropping</p>
+                      <p>Analyze a product first to enable enhancement</p>
                     </div>
                   </div>
                 </CardContent>
@@ -283,13 +282,14 @@ const Index = () => {
           <CardContent className="text-green-700 space-y-2">
             <ol className="list-decimal list-inside space-y-2">
               <li>Enter your OpenAI API key in the configuration section above</li>
-              <li>Upload an image file (JPG, PNG, etc.)</li>
-              <li>Click "Detect Objects" to analyze the image</li>
-              <li>Objects will be automatically detected and cropped</li>
-              <li>Download your cropped objects individually</li>
+              <li>Upload a product image file (JPG, PNG, etc.)</li>
+              <li>Click "Detect Product" to analyze the image</li>
+              <li>Crop out the product you want to enhance</li>
+              <li>Use "Find Similar Product Online" to get a high-quality replacement</li>
+              <li>Or use "Create Professional Image" for background enhancement</li>
             </ol>
             <p className="text-sm mt-4 text-green-600">
-              Each detected object will be automatically cropped into a separate image that you can download.
+              The AI will identify your product and either find a similar high-quality image online or enhance it professionally.
             </p>
           </CardContent>
         </Card>

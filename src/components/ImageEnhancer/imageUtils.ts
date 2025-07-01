@@ -26,6 +26,49 @@ export const convertImageToBase64 = async (imageUrl: string): Promise<string> =>
   });
 };
 
+export const searchSimilarProduct = async (productDescription: string, apiKey: string): Promise<string | null> => {
+  try {
+    console.log('Searching for product:', productDescription);
+    
+    // Use OpenAI to generate a professional product image based on the description
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'dall-e-2',
+        prompt: `Professional product photography of ${productDescription}, clean white background, high quality, commercial product photo, studio lighting, 4K resolution, sharp focus, product catalog style`,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard',
+        style: 'natural'
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI Image Generation error:', errorData);
+      throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const imageUrl = data.data[0]?.url;
+    
+    if (imageUrl) {
+      console.log('Generated product image:', imageUrl);
+      return imageUrl;
+    } else {
+      throw new Error('No image URL received from OpenAI');
+    }
+
+  } catch (error) {
+    console.error('Product search error:', error);
+    return null;
+  }
+};
+
 export const enhanceImageWithCanvas = async (
   imageUrl: string,
   backgroundType: string,
