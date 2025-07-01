@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,21 +24,63 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [apiKey, setApiKey] = useState('');
 
-  // Professional Shopify background options
+  // Enhanced Shopify background options with studio effects
   const backgroundOptions = [
-    { value: 'professional-white', label: 'Professional Pure White', color: '#FFFFFF', description: 'Clean, bright white background' },
-    { value: 'soft-white', label: 'Soft White with Shadow', color: '#FEFEFE', description: 'White with subtle product shadow' },
-    { value: 'transparent', label: 'Transparent PNG', color: 'transparent', description: 'No background (PNG format)' },
-    { value: 'light-gray', label: 'Light Gray Studio', color: '#F5F5F5', description: 'Professional studio lighting' },
-    { value: 'gradient-white', label: 'Premium White Gradient', color: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)', description: 'Subtle gradient effect' },
+    { 
+      value: 'professional-white', 
+      label: 'Studio Pure White', 
+      color: '#FFFFFF', 
+      description: 'Clean white with professional shadows' 
+    },
+    { 
+      value: 'soft-white', 
+      label: 'Soft Studio White', 
+      color: '#FEFEFE', 
+      description: 'Warm white with subtle lighting' 
+    },
+    { 
+      value: 'gradient-white', 
+      label: 'Premium Studio Gradient', 
+      color: 'linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%)', 
+      description: 'Gradient background with depth' 
+    },
+    { 
+      value: 'light-gray', 
+      label: 'Studio Light Gray', 
+      color: '#F5F5F5', 
+      description: 'Professional neutral background' 
+    },
+    { 
+      value: 'transparent', 
+      label: 'Transparent (PNG)', 
+      color: 'transparent', 
+      description: 'No background, PNG format' 
+    },
   ];
 
-  // Shopify-optimized image sizes
+  // Professional Shopify-optimized image sizes
   const sizeOptions = [
-    { value: '2048x2048', label: '2048×2048 - Shopify High-Res', recommended: true, description: 'Best for zoom & detail' },
-    { value: '1024x1024', label: '1024×1024 - Shopify Standard', description: 'Perfect balance of quality & size' },
-    { value: '800x800', label: '800×800 - Mobile Optimized', description: 'Fast loading for mobile' },
-    { value: '2000x2000', label: '2000×2000 - Shopify Plus', description: 'Premium quality for Pro stores' },
+    { 
+      value: '2048x2048', 
+      label: '2048×2048 - Shopify Premium', 
+      recommended: true, 
+      description: 'Best quality with zoom support' 
+    },
+    { 
+      value: '1024x1024', 
+      label: '1024×1024 - Shopify Standard', 
+      description: 'Perfect balance of quality & speed' 
+    },
+    { 
+      value: '2000x2000', 
+      label: '2000×2000 - Shopify Plus', 
+      description: 'High-end store quality' 
+    },
+    { 
+      value: '800x800', 
+      label: '800×800 - Mobile Optimized', 
+      description: 'Fast loading for mobile users' 
+    },
   ];
 
   const enhanceWithOnlineSearch = async () => {
@@ -117,10 +158,11 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
     setIsProcessing(true);
     
     try {
+      console.log(`Enhancing image with ${backgroundType} background at ${imageSize} size`);
       const url = await enhanceImageWithCanvas(imageUrl, backgroundType, imageSize);
       setEnhancedUrl(url);
       onEnhancedImage?.(url);
-      toast.success('Professional Shopify image enhancement complete!');
+      toast.success('Professional Shopify enhancement complete with studio effects!');
     } catch (error) {
       console.error('Professional enhancement failed:', error);
       toast.error('Enhancement failed. Please try again.');
@@ -133,10 +175,12 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
     const link = document.createElement('a');
     link.href = enhancedUrl;
     const fileExtension = backgroundType === 'transparent' ? 'png' : 'jpg';
-    link.download = `shopify-ready-${imageName.replace(/\s+/g, '-').toLowerCase()}-${imageSize}.${fileExtension}`;
+    const cleanName = imageName.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    link.download = `shopify-ready-${cleanName}-${imageSize}.${fileExtension}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success(`Downloaded: shopify-ready-${cleanName}-${imageSize}.${fileExtension}`);
   };
 
   const resetSettings = () => {

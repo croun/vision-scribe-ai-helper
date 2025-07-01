@@ -1,4 +1,3 @@
-
 export const convertImageToBase64 = async (imageUrl: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -85,28 +84,14 @@ export const enhanceImageWithCanvas = async (
       canvas.height = height;
       
       if (ctx) {
-        // Professional background setup
-        if (backgroundType === 'transparent') {
-          ctx.clearRect(0, 0, width, height);
-        } else if (backgroundType === 'professional-white') {
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, width, height);
-        } else if (backgroundType === 'soft-white') {
-          ctx.fillStyle = '#FEFEFE';
-          ctx.fillRect(0, 0, width, height);
-        } else if (backgroundType === 'light-gray') {
-          ctx.fillStyle = '#F5F5F5';
-          ctx.fillRect(0, 0, width, height);
-        } else if (backgroundType === 'gradient-white') {
-          const gradient = ctx.createLinearGradient(0, 0, width, height);
-          gradient.addColorStop(0, '#ffffff');
-          gradient.addColorStop(1, '#f8f9fa');
-          ctx.fillStyle = gradient;
-          ctx.fillRect(0, 0, width, height);
-        }
+        // Clear canvas first
+        ctx.clearRect(0, 0, width, height);
         
-        // Professional product sizing (85% for better visual impact)
-        const scale = Math.min(width / img.width, height / img.height) * 0.85;
+        // Set up professional background
+        setupBackground(ctx, width, height, backgroundType);
+        
+        // Calculate product sizing (80% for better visual impact with shadow space)
+        const scale = Math.min(width / img.width, height / img.height) * 0.8;
         const scaledWidth = img.width * scale;
         const scaledHeight = img.height * scale;
         
@@ -114,83 +99,21 @@ export const enhanceImageWithCanvas = async (
         const x = (width - scaledWidth) / 2;
         const y = (height - scaledHeight) / 2;
         
-        // Professional shadow effect (except for transparent)
+        // Apply studio shadow effect (except for transparent)
         if (backgroundType !== 'transparent') {
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
-          ctx.shadowBlur = 25;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 15;
+          applyStudioShadow(ctx, x, y, scaledWidth, scaledHeight);
         }
         
-        // Draw the enhanced product image
+        // Draw the product image
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
         
-        // Reset shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        
-        // Advanced image enhancement
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          // Enhanced brightness and contrast for professional look
-          const brightness = 1.15;
-          const contrast = 1.2;
-          
-          // Apply brightness
-          data[i] = Math.min(255, data[i] * brightness);     // Red
-          data[i + 1] = Math.min(255, data[i + 1] * brightness); // Green  
-          data[i + 2] = Math.min(255, data[i + 2] * brightness); // Blue
-          
-          // Apply contrast
-          data[i] = Math.min(255, ((data[i] - 128) * contrast) + 128);
-          data[i + 1] = Math.min(255, ((data[i + 1] - 128) * contrast) + 128);
-          data[i + 2] = Math.min(255, ((data[i + 2] - 128) * contrast) + 128);
-          
-          // Enhance saturation slightly
-          const max = Math.max(data[i], data[i + 1], data[i + 2]);
-          const min = Math.min(data[i], data[i + 1], data[i + 2]);
-          if (max !== min) {
-            const saturationBoost = 1.1;
-            const delta = (max - min) * saturationBoost;
-            const adjustment = (delta - (max - min)) / 2;
-            
-            if (data[i] !== max && data[i] !== min) data[i] = Math.max(0, Math.min(255, data[i] - adjustment));
-            if (data[i + 1] !== max && data[i + 1] !== min) data[i + 1] = Math.max(0, Math.min(255, data[i + 1] - adjustment));
-            if (data[i + 2] !== max && data[i + 2] !== min) data[i + 2] = Math.max(0, Math.min(255, data[i + 2] - adjustment));
-          }
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        // Apply subtle sharpening filter
-        const sharpenKernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
-        const sharpenedData = ctx.getImageData(0, 0, width, height);
-        const originalData = imageData.data;
-        const newData = sharpenedData.data;
-        
-        for (let y = 1; y < height - 1; y++) {
-          for (let x = 1; x < width - 1; x++) {
-            for (let c = 0; c < 3; c++) {
-              let sum = 0;
-              for (let ky = -1; ky <= 1; ky++) {
-                for (let kx = -1; kx <= 1; kx++) {
-                  const pixel = ((y + ky) * width + (x + kx)) * 4 + c;
-                  sum += originalData[pixel] * sharpenKernel[(ky + 1) * 3 + (kx + 1)];
-                }
-              }
-              const pixel = (y * width + x) * 4 + c;
-              newData[pixel] = Math.max(0, Math.min(255, sum));
-            }
-          }
-        }
-        
-        ctx.putImageData(sharpenedData, 0, 0);
+        // Apply professional image enhancements
+        applyImageEnhancements(ctx, width, height);
         
         // Convert to optimized format
+        const format = backgroundType === 'transparent' ? 'image/png' : 'image/jpeg';
+        const quality = backgroundType === 'transparent' ? 1.0 : 0.95;
+        
         canvas.toBlob((blob) => {
           if (blob) {
             const url = URL.createObjectURL(blob);
@@ -198,7 +121,7 @@ export const enhanceImageWithCanvas = async (
           } else {
             reject(new Error('Failed to create blob'));
           }
-        }, backgroundType === 'transparent' ? 'image/png' : 'image/jpeg', 0.95);
+        }, format, quality);
       }
     };
     
@@ -206,4 +129,161 @@ export const enhanceImageWithCanvas = async (
     img.src = imageUrl;
     img.onerror = () => reject(new Error('Failed to load image'));
   });
+};
+
+const setupBackground = (ctx: CanvasRenderingContext2D, width: number, height: number, backgroundType: string) => {
+  ctx.save();
+  
+  switch (backgroundType) {
+    case 'transparent':
+      // Keep transparent
+      break;
+      
+    case 'professional-white':
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+      break;
+      
+    case 'soft-white':
+      ctx.fillStyle = '#FEFEFE';
+      ctx.fillRect(0, 0, width, height);
+      break;
+      
+    case 'light-gray':
+      ctx.fillStyle = '#F5F5F5';
+      ctx.fillRect(0, 0, width, height);
+      break;
+      
+    case 'gradient-white':
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.5, '#fafafa');
+      gradient.addColorStop(1, '#f5f5f5');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      break;
+      
+    default:
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
+  }
+  
+  ctx.restore();
+};
+
+const applyStudioShadow = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) => {
+  ctx.save();
+  
+  // Create multiple shadow layers for realistic studio lighting
+  const shadows = [
+    { blur: 30, offsetY: 20, opacity: 0.15, color: 'rgba(0, 0, 0, 0.15)' },
+    { blur: 15, offsetY: 10, opacity: 0.1, color: 'rgba(0, 0, 0, 0.1)' },
+    { blur: 5, offsetY: 5, opacity: 0.05, color: 'rgba(0, 0, 0, 0.05)' }
+  ];
+  
+  shadows.forEach(shadow => {
+    ctx.shadowColor = shadow.color;
+    ctx.shadowBlur = shadow.blur;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = shadow.offsetY;
+    
+    // Draw invisible rectangle to create shadow
+    ctx.globalAlpha = shadow.opacity;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.01)';
+    ctx.fillRect(x, y, width, height);
+  });
+  
+  // Reset shadow settings
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.globalAlpha = 1;
+  
+  ctx.restore();
+};
+
+const applyImageEnhancements = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  
+  // Professional color enhancement
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    
+    // Skip transparent pixels
+    if (data[i + 3] === 0) continue;
+    
+    // Enhanced brightness and contrast for professional look
+    const brightness = 1.1;
+    const contrast = 1.15;
+    
+    // Apply brightness
+    let newR = Math.min(255, r * brightness);
+    let newG = Math.min(255, g * brightness);
+    let newB = Math.min(255, b * brightness);
+    
+    // Apply contrast
+    newR = Math.min(255, Math.max(0, ((newR - 128) * contrast) + 128));
+    newG = Math.min(255, Math.max(0, ((newG - 128) * contrast) + 128));
+    newB = Math.min(255, Math.max(0, ((newB - 128) * contrast) + 128));
+    
+    // Subtle saturation boost for product appeal
+    const max = Math.max(newR, newG, newB);
+    const min = Math.min(newR, newG, newB);
+    
+    if (max !== min) {
+      const saturationBoost = 1.08;
+      const center = (max + min) / 2;
+      
+      newR = Math.min(255, Math.max(0, center + (newR - center) * saturationBoost));
+      newG = Math.min(255, Math.max(0, center + (newG - center) * saturationBoost));
+      newB = Math.min(255, Math.max(0, center + (newB - center) * saturationBoost));
+    }
+    
+    data[i] = newR;
+    data[i + 1] = newG;
+    data[i + 2] = newB;
+  }
+  
+  ctx.putImageData(imageData, 0, 0);
+  
+  // Apply subtle sharpening for crisp product details
+  applySharpening(ctx, width, height);
+};
+
+const applySharpening = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const originalData = new Uint8ClampedArray(imageData.data);
+  const data = imageData.data;
+  
+  // Subtle sharpening kernel
+  const kernel = [
+    0, -0.5, 0,
+    -0.5, 3, -0.5,
+    0, -0.5, 0
+  ];
+  
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      for (let c = 0; c < 3; c++) { // RGB channels only
+        let sum = 0;
+        
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const pixel = ((y + ky) * width + (x + kx)) * 4 + c;
+            const kernelIndex = (ky + 1) * 3 + (kx + 1);
+            sum += originalData[pixel] * kernel[kernelIndex];
+          }
+        }
+        
+        const currentPixel = (y * width + x) * 4 + c;
+        data[currentPixel] = Math.max(0, Math.min(255, sum));
+      }
+    }
+  }
+  
+  ctx.putImageData(imageData, 0, 0);
 };
