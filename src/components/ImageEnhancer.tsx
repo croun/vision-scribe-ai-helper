@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Sparkles, Download, RefreshCw, Palette, Settings, Zap, Crown, Shield, Wand2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { EnhancementSettings } from './ImageEnhancer/EnhancementSettings';
-import { enhanceImageWithCanvas, removeBackground, loadImage, reimagineProductImage } from './ImageEnhancer/imageUtils';
+import { enhanceImageWithCanvas, reimagineProductImage } from './ImageEnhancer/imageUtils';
 
 interface ImageEnhancerProps {
   imageUrl: string;
@@ -18,10 +19,8 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
   const [backgroundType, setBackgroundType] = useState('studio-white');
   const [imageSize, setImageSize] = useState('2048x2048');
   const [enhancedUrl, setEnhancedUrl] = useState<string>('');
-  const [backgroundRemovedUrl, setBackgroundRemovedUrl] = useState<string>('');
   const [reimaginedUrl, setReimagineUrl] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isRemovingBackground, setIsRemovingBackground] = useState(false);
   const [isReimagining, setIsReimagining] = useState(false);
   const [apiKey, setApiKey] = useState('');
 
@@ -93,39 +92,6 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
     },
   ];
 
-  const handleRemoveBackground = async () => {
-    setIsRemovingBackground(true);
-    
-    try {
-      console.log('Removing background from image...');
-      toast.loading('Removing background...', { id: 'bg-removal-loading' });
-      
-      // Load the image
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const imageElement = await loadImage(blob);
-      
-      // Remove background
-      const backgroundRemovedBlob = await removeBackground(imageElement);
-      const url = URL.createObjectURL(backgroundRemovedBlob);
-      setBackgroundRemovedUrl(url);
-      
-      toast.dismiss('bg-removal-loading');
-      toast.success('✨ Background removed successfully!', {
-        description: 'Your product is now isolated and ready for enhancement.',
-        duration: 4000,
-      });
-    } catch (error) {
-      console.error('Background removal failed:', error);
-      toast.dismiss('bg-removal-loading');
-      toast.error('Background removal failed. Please try again.', {
-        description: 'There was an issue processing your image.',
-      });
-    } finally {
-      setIsRemovingBackground(false);
-    }
-  };
-
   const handleReimagineProduct = async () => {
     if (!apiKey.trim()) {
       toast.error('Please enter your OpenAI API key first');
@@ -138,8 +104,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
       console.log('Reimagining product for customer appeal...');
       toast.loading('Reimagining your product...', { id: 'reimagine-loading' });
       
-      const sourceUrl = backgroundRemovedUrl || imageUrl;
-      const reimaginedImageUrl = await reimagineProductImage(sourceUrl, apiKey);
+      const reimaginedImageUrl = await reimagineProductImage(imageUrl, apiKey);
       
       if (reimaginedImageUrl) {
         setReimagineUrl(reimaginedImageUrl);
@@ -169,7 +134,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
       console.log(`Creating professional product image with ${backgroundType} background at ${imageSize}`);
       toast.loading('Processing your product image...', { id: 'enhance-loading' });
       
-      const sourceUrl = reimaginedUrl || backgroundRemovedUrl || imageUrl;
+      const sourceUrl = reimaginedUrl || imageUrl;
       const url = await enhanceImageWithCanvas(sourceUrl, backgroundType, imageSize);
       setEnhancedUrl(url);
       onEnhancedImage?.(url);
@@ -218,7 +183,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
 
   return (
     <div className="space-y-6">
-      {/* Background Removal & Reimagining Card */}
+      {/* AI Product Enhancement Pipeline */}
       <Card className="border-2 border-blue-100 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 shadow-lg">
         <CardHeader className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-100">
           <CardTitle className="text-xl flex items-center gap-3 text-blue-800">
@@ -231,10 +196,10 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
               AI POWERED
             </div>
           </CardTitle>
-          <p className="text-sm text-blue-700 leading-relaxed">Remove background and reimagine your product into a more customer-friendly version</p>
+          <p className="text-sm text-blue-700 leading-relaxed">Reimagine your product into a more customer-friendly version</p>
         </CardHeader>
         <CardContent className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Original Image */}
             <div className="space-y-4">
               <div className="relative group">
@@ -251,54 +216,6 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                 <p className="text-sm font-semibold text-gray-700 mb-1">Your Product</p>
                 <p className="text-xs text-gray-500">Starting point</p>
               </div>
-            </div>
-            
-            {/* Background Removed */}
-            <div className="space-y-4">
-              <div className="relative group">
-                <div className="w-full h-40 border-2 border-dashed border-blue-300 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center transition-all group-hover:border-blue-400">
-                  {backgroundRemovedUrl ? (
-                    <>
-                      <img 
-                        src={backgroundRemovedUrl} 
-                        alt="Background Removed" 
-                        className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
-                      />
-                      <div className="absolute top-3 left-3 bg-blue-600 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
-                        BG REMOVED
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center space-y-3">
-                      <div className="w-16 h-16 mx-auto bg-blue-600 rounded-full flex items-center justify-center">
-                        <Eye className="h-8 w-8 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-blue-700">Isolated Product</p>
-                        <p className="text-xs text-blue-500">Clean background removal</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <Button 
-                onClick={handleRemoveBackground}
-                disabled={isRemovingBackground}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                size="sm"
-              >
-                {isRemovingBackground ? (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-                    Removing...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Remove Background
-                  </>
-                )}
-              </Button>
             </div>
 
             {/* Reimagined Product */}
@@ -362,31 +279,13 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Main Enhancement Card */}
-      <Card className="border-2 border-purple-100 bg-gradient-to-br from-white via-purple-50/20 to-blue-50/20 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border-b border-purple-100">
-          <CardTitle className="text-xl flex items-center gap-3 text-purple-800">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Sparkles className="h-6 w-6 text-purple-600" />
-            </div>
-            Professional Product Enhancement
-            <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-              <Crown className="h-3 w-3" />
-              SHOPIFY PRO
-            </div>
-          </CardTitle>
-          <p className="text-sm text-purple-700 leading-relaxed">Transform your product images into stunning, professional Shopify-ready shots with advanced AI enhancement</p>
-        </CardHeader>
-        <CardContent className="p-8">
           {/* Enhanced Image Comparison */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div className="space-y-4">
               <div className="relative group">
                 <img 
-                  src={reimaginedUrl || backgroundRemovedUrl || imageUrl} 
+                  src={reimaginedUrl || imageUrl} 
                   alt="Source" 
                   className="w-full h-56 object-contain border-2 border-gray-200 rounded-xl bg-gray-50/50 transition-transform group-hover:scale-[1.02]"
                 />
@@ -397,7 +296,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-700 mb-1">
-                  {reimaginedUrl ? 'Reimagined Product' : backgroundRemovedUrl ? 'Background Removed' : 'Original Image'}
+                  {reimaginedUrl ? 'Reimagined Product' : 'Original Image'}
                 </p>
                 <p className="text-xs text-gray-500">Ready for enhancement</p>
               </div>
