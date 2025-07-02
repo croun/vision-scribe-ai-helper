@@ -68,6 +68,164 @@ export const searchSimilarProduct = async (productDescription: string, apiKey: s
   }
 };
 
+// Improved auto-crop function with better accuracy
+export const autoCropProduct = async (imageUrl: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      const data = imageData.data;
+      
+      // More accurate edge detection with better threshold
+      const bounds = findProductBounds(data, img.width, img.height);
+      
+      if (bounds) {
+        // Add padding around the detected object (8% instead of 10% for tighter crop)
+        const padding = Math.min(bounds.width, bounds.height) * 0.08;
+        const cropX = Math.max(0, bounds.minX - padding);
+        const cropY = Math.max(0, bounds.minY - padding);
+        const cropWidth = Math.min(img.width - cropX, bounds.width + padding * 2);
+        const cropHeight = Math.min(img.height - cropY, bounds.height + padding * 2);
+        
+        // Create cropped canvas
+        const croppedCanvas = document.createElement('canvas');
+        const croppedCtx = croppedCanvas.getContext('2d');
+        
+        if (croppedCtx) {
+          croppedCanvas.width = cropWidth;
+          croppedCanvas.height = cropHeight;
+          
+          croppedCtx.drawImage(
+            img,
+            cropX, cropY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
+          );
+          
+          croppedCanvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              resolve(url);
+            } else {
+              reject(new Error('Failed to create cropped blob'));
+            }
+          }, 'image/png', 1.0);
+        } else {
+          reject(new Error('Could not get cropped canvas context'));
+        }
+      } else {
+        // If no bounds detected, return original image
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            resolve(url);
+          } else {
+            reject(new Error('Failed to create blob'));
+          }
+        }, 'image/png', 1.0);
+      }
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = imageUrl;
+  });
+};
+
+// More accurate product bounds detection
+const findProductBounds = (data: Uint8ClampedArray, width: number, height: number) => {
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  let hasContent = false;
+  
+  // Multi-pass edge detection for better accuracy
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+      
+      // Improved content detection with better thresholds
+      const isBackground = (
+        // Pure white or very light backgrounds
+        (r > 240 && g > 240 && b > 240) ||
+        // Transparent pixels
+        a < 50 ||
+        // Very light gray backgrounds
+        (Math.abs(r - g) < 10 && Math.abs(g - b) < 10 && r > 230)
+      );
+      
+      // Additional edge detection using local contrast
+      const hasLocalContrast = checkLocalContrast(data, x, y, width, height);
+      
+      if (!isBackground || hasLocalContrast) {
+        hasContent = true;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  
+  if (!hasContent || maxX <= minX || maxY <= minY) {
+    return null;
+  }
+  
+  return {
+    minX,
+    minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
+};
+
+// Check local contrast for better edge detection
+const checkLocalContrast = (data: Uint8ClampedArray, x: number, y: number, width: number, height: number): boolean => {
+  const radius = 2;
+  let contrastSum = 0;
+  let pixelCount = 0;
+  
+  const centerI = (y * width + x) * 4;
+  const centerR = data[centerI];
+  const centerG = data[centerI + 1];
+  const centerB = data[centerI + 2];
+  
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const nx = x + dx;
+      const ny = y + dy;
+      
+      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+        const i = (ny * width + nx) * 4;
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        const contrast = Math.abs(r - centerR) + Math.abs(g - centerG) + Math.abs(b - centerB);
+        contrastSum += contrast;
+        pixelCount++;
+      }
+    }
+  }
+  
+  const avgContrast = contrastSum / pixelCount;
+  return avgContrast > 25; // Threshold for significant contrast
+};
+
 export const enhanceImageWithCanvas = async (
   imageUrl: string,
   backgroundType: string,
@@ -87,8 +245,8 @@ export const enhanceImageWithCanvas = async (
         // Clear canvas with professional background
         ctx.clearRect(0, 0, width, height);
         
-        // Set up professional background
-        setupProfessionalBackground(ctx, width, height, backgroundType);
+        // Set up realistic background
+        setupRealisticBackground(ctx, width, height, backgroundType);
         
         // Calculate optimal product sizing and positioning
         const productScale = calculateOptimalScale(img.width, img.height, width, height);
@@ -99,9 +257,9 @@ export const enhanceImageWithCanvas = async (
         const x = (width - scaledWidth) / 2;
         const y = (height - scaledHeight) / 2;
         
-        // Apply professional lighting effects
+        // Apply subtle realistic lighting effects
         if (backgroundType !== 'transparent') {
-          applyProfessionalLighting(ctx, x, y, scaledWidth, scaledHeight, backgroundType);
+          applyRealisticLighting(ctx, x, y, scaledWidth, scaledHeight, backgroundType);
         }
         
         // Draw the product with high quality
@@ -109,12 +267,12 @@ export const enhanceImageWithCanvas = async (
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
         
-        // Apply professional enhancements
-        applyProfessionalEnhancements(ctx, width, height, backgroundType);
+        // Apply realistic enhancements (toned down)
+        applyRealisticEnhancements(ctx, width, height, backgroundType);
         
         // Convert to optimized format
         const format = backgroundType === 'transparent' ? 'image/png' : 'image/jpeg';
-        const quality = backgroundType === 'transparent' ? 1.0 : 0.98;
+        const quality = backgroundType === 'transparent' ? 1.0 : 0.95;
         
         canvas.toBlob((blob) => {
           if (blob) {
@@ -134,14 +292,14 @@ export const enhanceImageWithCanvas = async (
 };
 
 const calculateOptimalScale = (imgWidth: number, imgHeight: number, canvasWidth: number, canvasHeight: number): number => {
-  // Calculate scale to fit within 85% of canvas (leaving room for shadows and padding)
-  const maxScale = 0.85;
+  // Calculate scale to fit within 80% of canvas (more conservative for better framing)
+  const maxScale = 0.80;
   const scaleX = (canvasWidth * maxScale) / imgWidth;
   const scaleY = (canvasHeight * maxScale) / imgHeight;
   return Math.min(scaleX, scaleY);
 };
 
-const setupProfessionalBackground = (ctx: CanvasRenderingContext2D, width: number, height: number, backgroundType: string) => {
+const setupRealisticBackground = (ctx: CanvasRenderingContext2D, width: number, height: number, backgroundType: string) => {
   ctx.save();
   
   switch (backgroundType) {
@@ -155,12 +313,12 @@ const setupProfessionalBackground = (ctx: CanvasRenderingContext2D, width: numbe
       break;
       
     case 'soft-studio':
-      ctx.fillStyle = '#FAFAFA';
+      ctx.fillStyle = '#FEFEFE';
       ctx.fillRect(0, 0, width, height);
-      // Add subtle vignette
-      const vignette = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width/1.5);
+      // Very subtle vignette
+      const vignette = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width/1.8);
       vignette.addColorStop(0, 'rgba(255, 255, 255, 0)');
-      vignette.addColorStop(1, 'rgba(250, 250, 250, 0.3)');
+      vignette.addColorStop(1, 'rgba(248, 248, 248, 0.15)');
       ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, width, height);
       break;
@@ -168,24 +326,15 @@ const setupProfessionalBackground = (ctx: CanvasRenderingContext2D, width: numbe
     case 'premium-gradient':
       const gradient = ctx.createLinearGradient(0, 0, width, height);
       gradient.addColorStop(0, '#ffffff');
-      gradient.addColorStop(0.5, '#f8f9fa');
-      gradient.addColorStop(1, '#f1f3f4');
+      gradient.addColorStop(0.5, '#fcfcfc');
+      gradient.addColorStop(1, '#f9f9f9');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
       break;
       
     case 'light-neutral':
-      ctx.fillStyle = '#F5F5F5';
+      ctx.fillStyle = '#FAFAFA';
       ctx.fillRect(0, 0, width, height);
-      // Add subtle texture
-      for (let i = 0; i < width; i += 4) {
-        for (let j = 0; j < height; j += 4) {
-          if (Math.random() > 0.95) {
-            ctx.fillStyle = 'rgba(240, 240, 240, 0.5)';
-            ctx.fillRect(i, j, 1, 1);
-          }
-        }
-      }
       break;
       
     default:
@@ -196,14 +345,13 @@ const setupProfessionalBackground = (ctx: CanvasRenderingContext2D, width: numbe
   ctx.restore();
 };
 
-const applyProfessionalLighting = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, backgroundType: string) => {
+const applyRealisticLighting = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, backgroundType: string) => {
   ctx.save();
   
-  // Professional drop shadow system
+  // Subtle, realistic drop shadow
   const shadowLayers = [
-    { blur: 25, offsetX: 0, offsetY: 15, opacity: 0.12, color: 'rgba(0, 0, 0, 0.12)' },
-    { blur: 15, offsetX: 0, offsetY: 8, opacity: 0.08, color: 'rgba(0, 0, 0, 0.08)' },
-    { blur: 8, offsetX: 0, offsetY: 4, opacity: 0.06, color: 'rgba(0, 0, 0, 0.06)' }
+    { blur: 15, offsetX: 0, offsetY: 8, opacity: 0.06, color: 'rgba(0, 0, 0, 0.06)' },
+    { blur: 8, offsetX: 0, offsetY: 4, opacity: 0.04, color: 'rgba(0, 0, 0, 0.04)' }
   ];
   
   shadowLayers.forEach(shadow => {
@@ -225,23 +373,14 @@ const applyProfessionalLighting = (ctx: CanvasRenderingContext2D, x: number, y: 
   ctx.shadowOffsetY = 0;
   ctx.globalAlpha = 1;
   
-  // Add subtle reflection for premium backgrounds
-  if (backgroundType === 'premium-gradient' || backgroundType === 'studio-white') {
-    const reflectionGradient = ctx.createLinearGradient(x, y + height, x, y + height + 30);
-    reflectionGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-    reflectionGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = reflectionGradient;
-    ctx.fillRect(x, y + height, width, 30);
-  }
-  
   ctx.restore();
 };
 
-const applyProfessionalEnhancements = (ctx: CanvasRenderingContext2D, width: number, height: number, backgroundType: string) => {
+const applyRealisticEnhancements = (ctx: CanvasRenderingContext2D, width: number, height: number, backgroundType: string) => {
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
   
-  // Enhanced color correction for professional product photography
+  // Subtle, realistic color correction
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
     const g = data[i + 1];
@@ -251,30 +390,26 @@ const applyProfessionalEnhancements = (ctx: CanvasRenderingContext2D, width: num
     // Skip transparent pixels
     if (a === 0) continue;
     
-    // Professional color enhancement
-    const brightness = 1.08;
-    const contrast = 1.12;
-    const saturation = 1.06;
+    // Very subtle realistic enhancements
+    const brightness = 1.02; // Much more subtle
+    const contrast = 1.05;   // Reduced contrast
+    const saturation = 1.02; // Minimal saturation boost
     
-    // Apply brightness
+    // Apply subtle brightness
     let newR = Math.min(255, r * brightness);
     let newG = Math.min(255, g * brightness);
     let newB = Math.min(255, b * brightness);
     
-    // Apply contrast
+    // Apply subtle contrast
     newR = Math.min(255, Math.max(0, ((newR - 128) * contrast) + 128));
     newG = Math.min(255, Math.max(0, ((newG - 128) * contrast) + 128));
     newB = Math.min(255, Math.max(0, ((newB - 128) * contrast) + 128));
     
-    // Apply saturation enhancement
+    // Apply minimal saturation enhancement
     const gray = 0.299 * newR + 0.587 * newG + 0.114 * newB;
     newR = Math.min(255, Math.max(0, gray + saturation * (newR - gray)));
     newG = Math.min(255, Math.max(0, gray + saturation * (newG - gray)));
     newB = Math.min(255, Math.max(0, gray + saturation * (newB - gray)));
-    
-    // Color temperature adjustment for warmer, more appealing products
-    newR = Math.min(255, newR * 1.02);
-    newB = Math.min(255, newB * 0.98);
     
     data[i] = newR;
     data[i + 1] = newG;
@@ -283,25 +418,20 @@ const applyProfessionalEnhancements = (ctx: CanvasRenderingContext2D, width: num
   
   ctx.putImageData(imageData, 0, 0);
   
-  // Apply professional sharpening
-  applyProfessionalSharpening(ctx, width, height);
-  
-  // Add subtle highlight enhancement
-  if (backgroundType !== 'transparent') {
-    addHighlightEnhancement(ctx, width, height);
-  }
+  // Apply very subtle sharpening
+  applySubtleSharpening(ctx, width, height);
 };
 
-const applyProfessionalSharpening = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+const applySubtleSharpening = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
   const imageData = ctx.getImageData(0, 0, width, height);
   const originalData = new Uint8ClampedArray(imageData.data);
   const data = imageData.data;
   
-  // Professional sharpening kernel
+  // Subtle sharpening kernel
   const kernel = [
-    0, -0.4, 0,
-    -0.4, 2.6, -0.4,
-    0, -0.4, 0
+    0, -0.2, 0,
+    -0.2, 1.8, -0.2,
+    0, -0.2, 0
   ];
   
   for (let y = 1; y < height - 1; y++) {
@@ -324,17 +454,4 @@ const applyProfessionalSharpening = (ctx: CanvasRenderingContext2D, width: numbe
   }
   
   ctx.putImageData(imageData, 0, 0);
-};
-
-const addHighlightEnhancement = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-  // Add subtle highlight gradient for more professional appearance
-  const highlight = ctx.createRadialGradient(width * 0.3, height * 0.2, 0, width * 0.3, height * 0.2, width * 0.8);
-  highlight.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-  highlight.addColorStop(0.6, 'rgba(255, 255, 255, 0.02)');
-  highlight.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.fillStyle = highlight;
-  ctx.fillRect(0, 0, width, height);
-  ctx.globalCompositeOperation = 'source-over';
 };
