@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Eye, Loader2, AlertCircle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Upload, Eye, Loader2, AlertCircle, Scissors, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageCropper } from '@/components/ImageCropper';
+import { ImageEnhancer } from '@/components/ImageEnhancer';
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
@@ -16,6 +19,8 @@ const Index = () => {
   const [detectionResult, setDetectionResult] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
+  const [croppingMode, setCroppingMode] = useState<'manual' | 'auto'>('auto');
+  const [autoCroppedImage, setAutoCroppedImage] = useState<string>('');
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -24,7 +29,8 @@ const Index = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
-        setShowCropper(false); // Reset cropper when new image is selected
+        setShowCropper(false);
+        setAutoCroppedImage('');
       };
       reader.readAsDataURL(file);
     }
@@ -39,6 +45,45 @@ const Index = () => {
       };
       reader.onerror = reject;
       reader.readAsDataURL(file);
+    });
+  };
+
+  const createAutoCrop = (imageUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        if (!ctx) {
+          resolve(imageUrl);
+          return;
+        }
+        
+        // Set canvas to a standard square format for auto-crop
+        const size = Math.min(img.width, img.height);
+        const startX = (img.width - size) / 2;
+        const startY = (img.height - size) / 2;
+        
+        canvas.width = size;
+        canvas.height = size;
+        
+        // Draw the center-cropped image
+        ctx.drawImage(img, startX, startY, size, size, 0, 0, size, size);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const croppedUrl = URL.createObjectURL(blob);
+            resolve(croppedUrl);
+          } else {
+            resolve(imageUrl);
+          }
+        }, 'image/png');
+      };
+      
+      img.crossOrigin = 'anonymous';
+      img.src = imageUrl;
+      img.onerror = () => resolve(imageUrl);
     });
   };
 
@@ -100,8 +145,16 @@ const Index = () => {
       
       if (result) {
         setDetectionResult(result);
-        setShowCropper(true);
-        toast.success('Product analysis completed! You can now crop and enhance your image.');
+        
+        if (croppingMode === 'auto') {
+          // Create auto-cropped image
+          const croppedUrl = await createAutoCrop(imagePreview);
+          setAutoCroppedImage(croppedUrl);
+          toast.success('Product analysis completed! Auto-cropped image is ready for enhancement.');
+        } else {
+          setShowCropper(true);
+          toast.success('Product analysis completed! You can now crop and enhance your image.');
+        }
       } else {
         throw new Error('No analysis result received');
       }
@@ -123,12 +176,11 @@ const Index = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Eye className="h-8 w-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              AI Product Detection & Enhancement Tool
+              AI Product Enhancement Studio
             </h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload an image, let AI identify products, crop them out, and find similar high-quality versions online. 
-            Powered by OpenAI's advanced vision capabilities.
+            Upload product images, let AI analyze them, and create professional Shopify-ready images with advanced enhancement tools.
           </p>
         </div>
 
@@ -184,16 +236,42 @@ const Index = () => {
                 </div>
 
                 {imagePreview && (
-                  <div className="space-y-2">
-                    <Label>Preview</Label>
-                    <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50">
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        className="w-full h-auto max-h-64 object-contain rounded"
-                      />
+                  <>
+                    <div className="space-y-2">
+                      <Label>Preview</Label>
+                      <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50">
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="w-full h-auto max-h-64 object-contain rounded"
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-sm font-semibold">Cropping Mode</Label>
+                      <RadioGroup
+                        value={croppingMode}
+                        onValueChange={(value: 'manual' | 'auto') => setCroppingMode(value)}
+                        className="flex gap-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="auto" id="auto" />
+                          <Label htmlFor="auto" className="flex items-center gap-2 cursor-pointer">
+                            <Zap className="h-4 w-4 text-green-600" />
+                            Auto Crop (Center-focused)
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="manual" id="manual" />
+                          <Label htmlFor="manual" className="flex items-center gap-2 cursor-pointer">
+                            <Scissors className="h-4 w-4 text-blue-600" />
+                            Manual Crop (Precise control)
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </>
                 )}
 
                 <Button 
@@ -210,7 +288,7 @@ const Index = () => {
                   ) : (
                     <>
                       <Eye className="h-4 w-4 mr-2" />
-                      Detect Product
+                      Detect & Process Product
                     </>
                   )}
                 </Button>
@@ -238,7 +316,7 @@ const Index = () => {
                         <p>Analyzing your product...</p>
                       </div>
                     ) : (
-                      <p>Upload a product image and click "Detect Product" to see results</p>
+                      <p>Upload a product image and click "Detect & Process Product" to see results</p>
                     )}
                   </div>
                 )}
@@ -246,9 +324,9 @@ const Index = () => {
             </Card>
           </div>
 
-          {/* Product Enhancer */}
-          <div>
-            {showCropper && imagePreview ? (
+          {/* Product Processing */}
+          <div className="space-y-6">
+            {showCropper && croppingMode === 'manual' && imagePreview ? (
               <ImageCropper 
                 imageUrl={imagePreview}
                 detectionResult={detectionResult}
@@ -256,16 +334,26 @@ const Index = () => {
                   console.log('Cropped product image created:', croppedUrl);
                 }}
               />
+            ) : autoCroppedImage && croppingMode === 'auto' ? (
+              <ImageEnhancer
+                imageUrl={autoCroppedImage}
+                imageName={selectedImage?.name || 'product'}
+                detectionResult={detectionResult}
+                onEnhancedImage={(enhancedUrl) => {
+                  console.log('Enhanced image created:', enhancedUrl);
+                }}
+              />
             ) : (
               <Card className="h-fit">
                 <CardHeader>
-                  <CardTitle>Product Enhancer</CardTitle>
+                  <CardTitle>Product Enhancement Studio</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
                     <div className="text-center space-y-2">
                       <Eye className="h-8 w-8 mx-auto text-gray-400" />
                       <p>Analyze a product first to enable enhancement</p>
+                      <p className="text-xs">Choose auto-crop for instant results or manual crop for precision</p>
                     </div>
                   </div>
                 </CardContent>
@@ -283,13 +371,13 @@ const Index = () => {
             <ol className="list-decimal list-inside space-y-2">
               <li>Enter your OpenAI API key in the configuration section above</li>
               <li>Upload a product image file (JPG, PNG, etc.)</li>
-              <li>Click "Detect Product" to analyze the image</li>
-              <li>Crop out the product you want to enhance</li>
-              <li>Use "Find Similar Product Online" to get a high-quality replacement</li>
-              <li>Or use "Create Professional Image" for background enhancement</li>
+              <li>Choose between Auto Crop (instant center-focused crop) or Manual Crop (precise control)</li>
+              <li>Click "Detect & Process Product" to analyze and process the image</li>
+              <li>Use the professional enhancement tools to create Shopify-ready images</li>
+              <li>Download your enhanced product images</li>
             </ol>
             <p className="text-sm mt-4 text-green-600">
-              The AI will identify your product and either find a similar high-quality image online or enhance it professionally.
+              Auto Crop mode provides instant results, while Manual Crop gives you precise control over the cropping area.
             </p>
           </CardContent>
         </Card>
