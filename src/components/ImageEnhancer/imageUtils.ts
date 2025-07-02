@@ -1,3 +1,127 @@
+import { pipeline, env } from '@huggingface/transformers';
+
+// Configure transformers.js
+env.allowLocalModels = false;
+env.useBrowserCache = false;
+
+const MAX_IMAGE_DIMENSION = 1024;
+
+// Background removal functionality
+function resizeImageIfNeeded(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, image: HTMLImageElement) {
+  let width = image.naturalWidth;
+  let height = image.naturalHeight;
+
+  if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+    if (width > height) {
+      height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+      width = MAX_IMAGE_DIMENSION;
+    } else {
+      width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+      height = MAX_IMAGE_DIMENSION;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(image, 0, 0, width, height);
+    return true;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(image, 0, 0);
+  return false;
+}
+
+export const removeBackground = async (imageElement: HTMLImageElement): Promise<Blob> => {
+  try {
+    console.log('Starting background removal process...');
+    const segmenter = await pipeline('image-segmentation', 'Xenova/segformer-b0-finetuned-ade-512-512', {
+      device: 'webgpu',
+    });
+    
+    // Convert HTMLImageElement to canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) throw new Error('Could not get canvas context');
+    
+    // Resize image if needed and draw it to canvas
+    const wasResized = resizeImageIfNeeded(canvas, ctx, imageElement);
+    console.log(`Image ${wasResized ? 'was' : 'was not'} resized. Final dimensions: ${canvas.width}x${canvas.height}`);
+    
+    // Get image data as base64
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    console.log('Image converted to base64');
+    
+    // Process the image with the segmentation model
+    console.log('Processing with segmentation model...');
+    const result = await segmenter(imageData);
+    
+    console.log('Segmentation result:', result);
+    
+    if (!result || !Array.isArray(result) || result.length === 0 || !result[0].mask) {
+      throw new Error('Invalid segmentation result');
+    }
+    
+    // Create a new canvas for the masked image
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = canvas.width;
+    outputCanvas.height = canvas.height;
+    const outputCtx = outputCanvas.getContext('2d');
+    
+    if (!outputCtx) throw new Error('Could not get output canvas context');
+    
+    // Draw original image
+    outputCtx.drawImage(canvas, 0, 0);
+    
+    // Apply the mask
+    const outputImageData = outputCtx.getImageData(
+      0, 0,
+      outputCanvas.width,
+      outputCanvas.height
+    );
+    const data = outputImageData.data;
+    
+    // Apply inverted mask to alpha channel
+    for (let i = 0; i < result[0].mask.data.length; i++) {
+      // Invert the mask value (1 - value) to keep the subject instead of the background
+      const alpha = Math.round((1 - result[0].mask.data[i]) * 255);
+      data[i * 4 + 3] = alpha;
+    }
+    
+    outputCtx.putImageData(outputImageData, 0, 0);
+    console.log('Mask applied successfully');
+    
+    // Convert canvas to blob
+    return new Promise((resolve, reject) => {
+      outputCanvas.toBlob(
+        (blob) => {
+          if (blob) {
+            console.log('Successfully created final blob');
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create blob'));
+          }
+        },
+        'image/png',
+        1.0
+      );
+    });
+  } catch (error) {
+    console.error('Error removing background:', error);
+    throw error;
+  }
+};
+
+export const loadImage = (file: Blob): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+};
+
 export const convertImageToBase64 = async (imageUrl: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -25,45 +149,93 @@ export const convertImageToBase64 = async (imageUrl: string): Promise<string> =>
   });
 };
 
-export const searchSimilarProduct = async (productDescription: string, apiKey: string): Promise<string | null> => {
+export const reimagineProductImage = async (imageUrl: string, apiKey: string): Promise<string | null> => {
   try {
-    console.log('Searching for product:', productDescription);
+    console.log('Reimagining product image for customer appeal...');
     
-    // Use OpenAI to generate a professional product image based on the description
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    // Convert image to base64 for analysis
+    const base64Image = await convertImageToBase64(imageUrl);
+    
+    // Use OpenAI Vision to analyze the product and then generate a reimagined version
+    const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'dall-e-2',
-        prompt: `Professional product photography of ${productDescription}, clean white background, high quality, commercial product photo, studio lighting, 4K resolution, sharp focus, product catalog style`,
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analyze this product image and describe what product this is in detail for generating a more customer-friendly, sales-oriented version. Focus on the product type, key features, and how it should be presented to appeal to customers.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: base64Image
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 300
+      }),
+    });
+
+    if (!analysisResponse.ok) {
+      const errorData = await analysisResponse.json();
+      console.error('OpenAI Analysis error:', errorData);
+      throw new Error(errorData.error?.message || `Analysis failed with status ${analysisResponse.status}`);
+    }
+
+    const analysisData = await analysisResponse.json();
+    const productDescription = analysisData.choices[0]?.message?.content;
+    
+    if (!productDescription) {
+      throw new Error('No product description received from analysis');
+    }
+
+    console.log('Product analysis:', productDescription);
+
+    // Generate a reimagined customer-friendly product image
+    const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'dall-e-3',
+        prompt: `Reimagine this ${productDescription} into a more customer-friendly image to be put on sale. Create a professional, appealing product photo with perfect lighting, clean composition, and customer appeal. Focus on making it look premium, desirable, and ready for e-commerce. Use professional product photography techniques with soft shadows and attractive presentation.`,
         n: 1,
         size: '1024x1024',
-        quality: 'standard',
+        quality: 'hd',
         style: 'natural'
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
+    if (!imageResponse.ok) {
+      const errorData = await imageResponse.json();
       console.error('OpenAI Image Generation error:', errorData);
-      throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+      throw new Error(errorData.error?.message || `Image generation failed with status ${imageResponse.status}`);
     }
 
-    const data = await response.json();
-    const imageUrl = data.data[0]?.url;
+    const imageData = await imageResponse.json();
+    const reimaginedImageUrl = imageData.data[0]?.url;
     
-    if (imageUrl) {
-      console.log('Generated product image:', imageUrl);
-      return imageUrl;
+    if (reimaginedImageUrl) {
+      console.log('Generated reimagined product image:', reimaginedImageUrl);
+      return reimaginedImageUrl;
     } else {
-      throw new Error('No image URL received from OpenAI');
+      throw new Error('No image URL received from reimagining');
     }
 
   } catch (error) {
-    console.error('Product search error:', error);
+    console.error('Product reimagining error:', error);
     return null;
   }
 };
