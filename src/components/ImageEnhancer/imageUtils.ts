@@ -1,3 +1,4 @@
+
 import { pipeline, env } from '@huggingface/transformers';
 
 // Configure transformers.js
@@ -210,21 +211,24 @@ export const reimagineProductImage = async (imageUrl: string, apiKey: string): P
       },
       body: JSON.stringify({
         model: 'dall-e-3',
-        prompt: `Enhance the following product image with high attention to cleanliness and presentation.
-⚠️ Do not change, retouch, restyle, or redraw the object itself in any way.
-This includes: no changes to shape, label, gloss, angle, or color — the object must remain pixel-accurate to the original.
+        prompt: `Enhance the following product image to look like a hyper-realistic studio photograph, suitable for commercial use.
 
-Your only tasks:
+🔒 The object in the image must not be redrawn, smoothed, restyled, or replaced.
+Treat the object as a real photographed item — preserve all its real-world imperfections, angles, and lighting exactly as captured.
 
-Remove the original background and replace it with a pure white, soft-lit background. Use natural falloff, gradients, or subtle studio lighting if needed — no texture, no shadows from the old floor.
+🎯 Your goal is to enhance realism without altering the object itself:
 
-Preserve all shadows and lighting on the object itself. Enhance only if necessary to make it cleaner or crisper.
+Replace the current background with a smooth, white-to-light-gray gradient backdrop that mimics professional studio lighting. No marble or texture.
 
-Tidy up the visual: eliminate noise, fix exposure if needed, and subtly brighten the surroundings.
+Add natural soft shadows beneath the object to ground it in space.
 
-Optionally, you may add a soft ground reflection or light vignette, as long as the object itself is untouched.
+Slightly increase overall sharpness, contrast, and edge clarity to simulate a high-end DSLR capture.
 
-Output as a professional, e-commerce-ready image with a clean, white studio-style look. Maintain resolution and aspect ratio.
+Clean up the background only — remove noise, uneven lighting, and color tints.
+
+Optionally, add a subtle studio light reflection or gloss on the floor, if it enhances realism without touching the object.
+
+⚠️ Do not change the object's shape, color, texture, or realism. Do not stylize it, cartoon it, or make it idealized. This must look like the exact same object, in a better-lit, cleaner, high-end photo shoot.
 
 Product: ${productDescription}`,
         n: 1,
