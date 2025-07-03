@@ -210,25 +210,23 @@ export const reimagineProductImage = async (imageUrl: string, apiKey: string): P
       },
       body: JSON.stringify({
         model: 'dall-e-3',
-        prompt: `You are an expert image enhancer and product photographer.
-Carefully enhance the following image with the following strict instructions:
+        prompt: `Enhance the following product image with high attention to cleanliness and presentation.
+⚠️ Do not change, retouch, restyle, or redraw the object itself in any way.
+This includes: no changes to shape, label, gloss, angle, or color — the object must remain pixel-accurate to the original.
 
-[original_image]
-${productDescription}
+Your only tasks:
 
-[enhancement_instructions]
+Remove the original background and replace it with a pure white, soft-lit background. Use natural falloff, gradients, or subtle studio lighting if needed — no texture, no shadows from the old floor.
 
-Preserve the product exactly — its shape, color, shadows, and position must not be altered or stylized.
+Preserve all shadows and lighting on the object itself. Enhance only if necessary to make it cleaner or crisper.
 
-Remove the current background and replace it with a clean, studio-quality white background.
+Tidy up the visual: eliminate noise, fix exposure if needed, and subtly brighten the surroundings.
 
-Adjust lighting and shadows to make the product look professionally lit — soft shadows under the product, light source from top-left.
+Optionally, you may add a soft ground reflection or light vignette, as long as the object itself is untouched.
 
-Improve image clarity — enhance sharpness, contrast, and color balance to bring out the product's natural colors and materials.
+Output as a professional, e-commerce-ready image with a clean, white studio-style look. Maintain resolution and aspect ratio.
 
-Add slight soft reflections below the product on the white surface if appropriate, to simulate a real product studio setup.
-
-Avoid artificial textures, props, logos, or any object additions.`,
+Product: ${productDescription}`,
         n: 1,
         size: '1024x1024',
         quality: 'hd',
