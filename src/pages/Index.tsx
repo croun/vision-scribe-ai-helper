@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Upload, Eye, Loader2, AlertCircle, Scissors, Zap } from 'lucide-react';
+import { Upload, Eye, Loader2, AlertCircle, Scissors, Zap, Download, Wand2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageCropper } from '@/components/ImageCropper';
 import { ImageEnhancer } from '@/components/ImageEnhancer';
+import { reimagineProductImage } from '@/components/ImageEnhancer/imageUtils';
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
@@ -21,6 +22,8 @@ const Index = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [croppingMode, setCroppingMode] = useState<'manual' | 'auto'>('auto');
   const [autoCroppedImage, setAutoCroppedImage] = useState<string>('');
+  const [reimaginedUrl, setReimagineUrl] = useState<string>('');
+  const [isReimagining, setIsReimagining] = useState(false);
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -31,6 +34,7 @@ const Index = () => {
         setImagePreview(e.target?.result as string);
         setShowCropper(false);
         setAutoCroppedImage('');
+        setReimagineUrl('');
       };
       reader.readAsDataURL(file);
     }
@@ -84,6 +88,63 @@ const Index = () => {
       img.crossOrigin = 'anonymous';
       img.src = imageUrl;
       img.onerror = () => resolve(imageUrl);
+    });
+  };
+
+  const handleReimagineProduct = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Please enter your OpenAI API key first');
+      return;
+    }
+
+    if (!imagePreview) {
+      toast.error('Please select an image first');
+      return;
+    }
+
+    setIsReimagining(true);
+    
+    try {
+      console.log('Reimagining product for customer appeal...');
+      toast.loading('Reimagining your product...', { id: 'reimagine-loading' });
+      
+      const reimaginedImageUrl = await reimagineProductImage(imagePreview, apiKey);
+      
+      if (reimaginedImageUrl) {
+        setReimagineUrl(reimaginedImageUrl);
+        toast.dismiss('reimagine-loading');
+        toast.success('🎨 Product reimagined successfully!', {
+          description: 'Your product has been transformed into a more customer-friendly version.',
+          duration: 4000,
+        });
+      } else {
+        throw new Error('Failed to reimagine product');
+      }
+    } catch (error) {
+      console.error('Product reimagining failed:', error);
+      toast.dismiss('reimagine-loading');
+      toast.error('Product reimagining failed. Please try again.', {
+        description: 'There was an issue reimagining your product.',
+      });
+    } finally {
+      setIsReimagining(false);
+    }
+  };
+
+  const downloadReimagined = () => {
+    if (!reimaginedUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = reimaginedUrl;
+    const fileName = `reimagined-${selectedImage?.name?.replace(/\.[^/.]+$/, '') || 'product'}.png`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success(`📥 Downloaded: ${fileName}`, {
+      description: 'Your reimagined product image is saved!',
+      duration: 3000,
     });
   };
 
@@ -236,42 +297,29 @@ const Index = () => {
                 </div>
 
                 {imagePreview && (
-                  <>
-                    <div className="space-y-2">
-                      <Label>Preview</Label>
-                      <div className="border-2 border-gray-200 rounded-lg p-2 bg-gray-50">
-                        <img 
-                          src={imagePreview} 
-                          alt="Preview" 
-                          className="w-full h-auto max-h-64 object-contain rounded"
-                        />
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Cropping Mode</Label>
+                    <RadioGroup
+                      value={croppingMode}
+                      onValueChange={(value: 'manual' | 'auto') => setCroppingMode(value)}
+                      className="flex gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="auto" id="auto" />
+                        <Label htmlFor="auto" className="flex items-center gap-2 cursor-pointer">
+                          <Zap className="h-4 w-4 text-green-600" />
+                          Auto Crop (Center-focused)
+                        </Label>
                       </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-sm font-semibold">Cropping Mode</Label>
-                      <RadioGroup
-                        value={croppingMode}
-                        onValueChange={(value: 'manual' | 'auto') => setCroppingMode(value)}
-                        className="flex gap-6"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="auto" id="auto" />
-                          <Label htmlFor="auto" className="flex items-center gap-2 cursor-pointer">
-                            <Zap className="h-4 w-4 text-green-600" />
-                            Auto Crop (Center-focused)
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="manual" id="manual" />
-                          <Label htmlFor="manual" className="flex items-center gap-2 cursor-pointer">
-                            <Scissors className="h-4 w-4 text-blue-600" />
-                            Manual Crop (Precise control)
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="manual" id="manual" />
+                        <Label htmlFor="manual" className="flex items-center gap-2 cursor-pointer">
+                          <Scissors className="h-4 w-4 text-blue-600" />
+                          Manual Crop (Precise control)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                 )}
 
                 <Button 
@@ -292,6 +340,19 @@ const Index = () => {
                     </>
                   )}
                 </Button>
+
+                {/* Object Cropper moved here */}
+                {showCropper && croppingMode === 'manual' && imagePreview && (
+                  <div className="mt-6">
+                    <ImageCropper 
+                      imageUrl={imagePreview}
+                      detectionResult={detectionResult}
+                      onCropComplete={(croppedUrl) => {
+                        console.log('Cropped product image created:', croppedUrl);
+                      }}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -324,17 +385,9 @@ const Index = () => {
             </Card>
           </div>
 
-          {/* Product Processing */}
+          {/* AI Product Enhancement Pipeline - Simplified */}
           <div className="space-y-6">
-            {showCropper && croppingMode === 'manual' && imagePreview ? (
-              <ImageCropper 
-                imageUrl={imagePreview}
-                detectionResult={detectionResult}
-                onCropComplete={(croppedUrl) => {
-                  console.log('Cropped product image created:', croppedUrl);
-                }}
-              />
-            ) : autoCroppedImage && croppingMode === 'auto' ? (
+            {autoCroppedImage && croppingMode === 'auto' ? (
               <ImageEnhancer
                 imageUrl={autoCroppedImage}
                 imageName={selectedImage?.name || 'product'}
@@ -344,16 +397,110 @@ const Index = () => {
                 }}
               />
             ) : (
-              <Card className="h-fit">
-                <CardHeader>
-                  <CardTitle>Product Enhancement Studio</CardTitle>
+              <Card className="border-2 border-blue-100 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 shadow-lg">
+                <CardHeader className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-100">
+                  <CardTitle className="text-xl flex items-center gap-3 text-blue-800">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Wand2 className="h-6 w-6 text-blue-600" />
+                    </div>
+                    AI Product Enhancement Pipeline
+                    <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                      <Sparkles className="h-3 w-3" />
+                      AI POWERED
+                    </div>
+                  </CardTitle>
+                  <p className="text-sm text-blue-700 leading-relaxed">Reimagine your product into a more customer-friendly version</p>
                 </CardHeader>
-                <CardContent>
-                  <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                    <div className="text-center space-y-2">
-                      <Eye className="h-8 w-8 mx-auto text-gray-400" />
-                      <p>Analyze a product first to enable enhancement</p>
-                      <p className="text-xs">Choose auto-crop for instant results or manual crop for precision</p>
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* Original Image */}
+                    <div className="space-y-4">
+                      <div className="relative group">
+                        {imagePreview ? (
+                          <>
+                            <img 
+                              src={imagePreview} 
+                              alt="Original" 
+                              className="w-full h-40 object-contain border-2 border-gray-200 rounded-xl bg-gray-50/50 transition-transform group-hover:scale-[1.02]"
+                            />
+                            <div className="absolute top-3 left-3 bg-gray-800 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
+                              ORIGINAL
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-40 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex items-center justify-center">
+                            <div className="text-center space-y-3">
+                              <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                              <p className="text-sm text-gray-500">Upload an image first</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Your Product</p>
+                        <p className="text-xs text-gray-500">Starting point</p>
+                      </div>
+                    </div>
+
+                    {/* Reimagined Product */}
+                    <div className="space-y-4">
+                      <div className="relative group">
+                        <div className="w-full h-40 border-2 border-dashed border-purple-300 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center transition-all group-hover:border-purple-400">
+                          {reimaginedUrl ? (
+                            <>
+                              <img 
+                                src={reimaginedUrl} 
+                                alt="Reimagined" 
+                                className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
+                              />
+                              <div className="absolute top-3 left-3 bg-purple-600 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
+                                REIMAGINED
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-center space-y-3">
+                              <div className="w-16 h-16 mx-auto bg-purple-600 rounded-full flex items-center justify-center">
+                                <Wand2 className="h-8 w-8 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-purple-700">Customer-Friendly</p>
+                                <p className="text-xs text-purple-500">AI-reimagined for sales</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Button 
+                          onClick={handleReimagineProduct}
+                          disabled={isReimagining || !apiKey.trim() || !imagePreview}
+                          className="w-full bg-purple-600 hover:bg-purple-700"
+                          size="sm"
+                        >
+                          {isReimagining ? (
+                            <>
+                              <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                              Reimagining...
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="h-4 w-4 mr-2" />
+                              Reimagine Product
+                            </>
+                          )}
+                        </Button>
+                        {reimaginedUrl && (
+                          <Button 
+                            onClick={downloadReimagined}
+                            variant="outline"
+                            className="w-full"
+                            size="sm"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Reimagined
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -373,7 +520,7 @@ const Index = () => {
               <li>Upload a product image file (JPG, PNG, etc.)</li>
               <li>Choose between Auto Crop (instant center-focused crop) or Manual Crop (precise control)</li>
               <li>Click "Detect & Process Product" to analyze and process the image</li>
-              <li>Use the professional enhancement tools to create Shopify-ready images</li>
+              <li>Use the AI enhancement tools to reimagine your product</li>
               <li>Download your enhanced product images</li>
             </ol>
             <p className="text-sm mt-4 text-green-600">
