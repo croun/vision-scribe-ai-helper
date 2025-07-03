@@ -3,10 +3,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Sparkles, Download, RefreshCw, Palette, Settings, Zap, Crown, Shield, Wand2, Eye } from 'lucide-react';
+import { Sparkles, Download, RefreshCw, Wand2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
-import { EnhancementSettings } from './ImageEnhancer/EnhancementSettings';
-import { enhanceImageWithCanvas, reimagineProductImage } from './ImageEnhancer/imageUtils';
+import { reimagineProductImage } from './ImageEnhancer/imageUtils';
 
 interface ImageEnhancerProps {
   imageUrl: string;
@@ -16,81 +15,9 @@ interface ImageEnhancerProps {
 }
 
 export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhancedImage }: ImageEnhancerProps) => {
-  const [backgroundType, setBackgroundType] = useState('studio-white');
-  const [imageSize, setImageSize] = useState('2048x2048');
-  const [enhancedUrl, setEnhancedUrl] = useState<string>('');
   const [reimaginedUrl, setReimagineUrl] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isReimagining, setIsReimagining] = useState(false);
   const [apiKey, setApiKey] = useState('');
-
-  // Professional backgrounds optimized for Shopify
-  const backgroundOptions = [
-    { 
-      value: 'studio-white', 
-      label: 'Studio White', 
-      color: '#FFFFFF', 
-      description: 'Pure white professional background',
-      premium: false
-    },
-    { 
-      value: 'soft-studio', 
-      label: 'Soft Studio', 
-      color: '#FAFAFA', 
-      description: 'Soft white with subtle vignette',
-      premium: false
-    },
-    { 
-      value: 'premium-gradient', 
-      label: 'Premium Gradient', 
-      color: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 50%, #f1f3f4 100%)', 
-      description: 'Elegant gradient with depth',
-      premium: true
-    },
-    { 
-      value: 'light-neutral', 
-      label: 'Light Neutral', 
-      color: '#F5F5F5', 
-      description: 'Professional neutral with texture',
-      premium: false
-    },
-    { 
-      value: 'transparent', 
-      label: 'Transparent PNG', 
-      color: 'transparent', 
-      description: 'No background, crystal clear PNG',
-      premium: true
-    },
-  ];
-
-  // Shopify-optimized sizes with recommendations
-  const sizeOptions = [
-    { 
-      value: '2048x2048', 
-      label: '2048×2048 - Premium', 
-      recommended: true, 
-      description: 'Best quality with zoom support',
-      premium: true
-    },
-    { 
-      value: '1024x1024', 
-      label: '1024×1024 - Standard', 
-      description: 'Perfect balance of quality & speed',
-      premium: false
-    },
-    { 
-      value: '2000x2000', 
-      label: '2000×2000 - High-End', 
-      description: 'Premium store quality',
-      premium: true
-    },
-    { 
-      value: '800x800', 
-      label: '800×800 - Mobile', 
-      description: 'Optimized for mobile commerce',
-      premium: false
-    },
-  ];
 
   const handleReimagineProduct = async () => {
     if (!apiKey.trim()) {
@@ -108,6 +35,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
       
       if (reimaginedImageUrl) {
         setReimagineUrl(reimaginedImageUrl);
+        onEnhancedImage?.(reimaginedImageUrl);
         toast.dismiss('reimagine-loading');
         toast.success('🎨 Product reimagined successfully!', {
           description: 'Your product has been transformed into a more customer-friendly version.',
@@ -127,58 +55,28 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
     }
   };
 
-  const enhanceForShopify = async () => {
-    setIsProcessing(true);
-    
-    try {
-      console.log(`Creating professional product image with ${backgroundType} background at ${imageSize}`);
-      toast.loading('Processing your product image...', { id: 'enhance-loading' });
-      
-      const sourceUrl = reimaginedUrl || imageUrl;
-      const url = await enhanceImageWithCanvas(sourceUrl, backgroundType, imageSize);
-      setEnhancedUrl(url);
-      onEnhancedImage?.(url);
-      
-      toast.dismiss('enhance-loading');
-      toast.success('✨ Professional product image created successfully!', {
-        description: 'Your Shopify-ready image is now ready for download.',
-        duration: 4000,
-      });
-    } catch (error) {
-      console.error('Enhancement failed:', error);
-      toast.dismiss('enhance-loading');
-      toast.error('Enhancement failed. Please try again.', {
-        description: 'There was an issue processing your image.',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const downloadImage = () => {
-    if (!enhancedUrl) return;
+  const downloadReimagined = () => {
+    if (!reimaginedUrl) return;
     
     const link = document.createElement('a');
-    link.href = enhancedUrl;
-    const fileExtension = backgroundType === 'transparent' ? 'png' : 'jpg';
+    link.href = reimaginedUrl;
     const cleanName = imageName.replace(/\.[^/.]+$/, "").replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
-    const fileName = `shopify-pro-${cleanName}-${imageSize.replace('x', 'x')}.${fileExtension}`;
+    const fileName = `reimagined-${cleanName}.png`;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
     toast.success(`📥 Downloaded: ${fileName}`, {
-      description: 'Your professional product image is saved and ready to upload to Shopify!',
+      description: 'Your reimagined product image is saved!',
       duration: 3000,
     });
   };
 
   const resetSettings = () => {
-    setBackgroundType('studio-white');
-    setImageSize('2048x2048');
-    setEnhancedUrl('');
-    toast.info('Settings reset to default', { duration: 2000 });
+    setReimagineUrl('');
+    setApiKey('');
+    toast.info('Reset completed', { duration: 2000 });
   };
 
   return (
@@ -209,12 +107,12 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                   className="w-full h-40 object-contain border-2 border-gray-200 rounded-xl bg-gray-50/50 transition-transform group-hover:scale-[1.02]"
                 />
                 <div className="absolute top-3 left-3 bg-gray-800 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
-                  ORIGINAL
+                  SOURCE
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700 mb-1">Your Product</p>
-                <p className="text-xs text-gray-500">Starting point</p>
+                <p className="text-sm font-semibold text-gray-700 mb-1">Original Image</p>
+                <p className="text-xs text-gray-500">Ready for enhancement</p>
               </div>
             </div>
 
@@ -229,96 +127,12 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                         alt="Reimagined" 
                         className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
                       />
-                      <div className="absolute top-3 left-3 bg-purple-600 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
-                        REIMAGINED
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center space-y-3">
-                      <div className="w-16 h-16 mx-auto bg-purple-600 rounded-full flex items-center justify-center">
-                        <Wand2 className="h-8 w-8 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-purple-700">Customer-Friendly</p>
-                        <p className="text-xs text-purple-500">AI-reimagined for sales</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="space-y-2">
-                  <Label htmlFor="openai-key" className="text-xs">OpenAI API Key</Label>
-                  <input
-                    id="openai-key"
-                    type="password"
-                    placeholder="sk-..."
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className="w-full px-2 py-1 border border-purple-200 rounded text-xs font-mono"
-                  />
-                </div>
-                <Button 
-                  onClick={handleReimagineProduct}
-                  disabled={isReimagining || !apiKey.trim()}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  size="sm"
-                >
-                  {isReimagining ? (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2 animate-spin" />
-                      Reimagining...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="h-4 w-4 mr-2" />
-                      Reimagine Product
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Enhanced Image Comparison */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="space-y-4">
-              <div className="relative group">
-                <img 
-                  src={reimaginedUrl || imageUrl} 
-                  alt="Source" 
-                  className="w-full h-56 object-contain border-2 border-gray-200 rounded-xl bg-gray-50/50 transition-transform group-hover:scale-[1.02]"
-                />
-                <div className="absolute top-3 left-3 bg-gray-800 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
-                  SOURCE
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700 mb-1">
-                  {reimaginedUrl ? 'Reimagined Product' : 'Original Image'}
-                </p>
-                <p className="text-xs text-gray-500">Ready for enhancement</p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="relative group">
-                <div className="w-full h-56 border-2 border-dashed border-purple-300 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center transition-all group-hover:border-purple-400">
-                  {enhancedUrl ? (
-                    <>
-                      <img 
-                        src={enhancedUrl} 
-                        alt="Enhanced" 
-                        className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
-                      />
                       <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
                         <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3" />
+                          <Crown className="h-3 w-3" />
                           ENHANCED
                         </div>
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-purple-600/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                     </>
                   ) : (
                     <div className="text-center space-y-3">
@@ -332,57 +146,70 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-purple-700">Professional Result</p>
-                        <p className="text-xs text-purple-500">Shopify-ready perfection</p>
+                        <p className="text-xs text-purple-500">Studio-ready perfection</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-purple-700 mb-1">Shopify-Ready Product</p>
+                <p className="text-sm font-semibold text-purple-700 mb-1">Studio-Ready Product</p>
                 <p className="text-xs text-purple-500">Professional enhancement applied</p>
               </div>
             </div>
           </div>
 
-          {/* Enhanced Settings */}
+          {/* API Key Input */}
           <div className="bg-gray-50/50 rounded-xl p-6 mb-6">
-            <EnhancementSettings
-              backgroundType={backgroundType}
-              setBackgroundType={setBackgroundType}
-              imageSize={imageSize}
-              setImageSize={setImageSize}
-              backgroundOptions={backgroundOptions}
-              sizeOptions={sizeOptions}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="openai-key" className="text-sm font-semibold text-gray-700">OpenAI API Key</Label>
+              <input
+                id="openai-key"
+                type="password"
+                placeholder="sk-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full px-3 py-2 border border-purple-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex gap-4">
             <Button 
-              onClick={enhanceForShopify}
+              onClick={handleReimagineProduct}
               size="lg"
               className="flex-1 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white font-semibold h-14 shadow-lg hover:shadow-xl transition-all duration-200"
-              disabled={isProcessing}
+              disabled={isReimagining || !apiKey.trim()}
             >
-              {isProcessing ? (
+              {isReimagining ? (
                 <>
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 animate-spin" />
-                    <span>Creating Professional Image...</span>
+                    <span>Reimagining Product...</span>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5" />
-                    <span>Create Professional Image</span>
+                    <Wand2 className="h-5 w-5" />
+                    <span>Reimagine Product</span>
                     <Crown className="h-4 w-4" />
                   </div>
                 </>
               )}
             </Button>
             
+            <Button 
+              onClick={downloadReimagined}
+              size="lg"
+              className="px-8 h-14 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              disabled={!reimaginedUrl}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+
             <Button 
               onClick={resetSettings}
               variant="outline"
@@ -392,95 +219,6 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
               <RefreshCw className="h-4 w-4 mr-2" />
               Reset
             </Button>
-          </div>
-
-          {/* Enhanced Download Section */}
-          {enhancedUrl && (
-            <div className="mt-8 p-6 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 rounded-xl shadow-lg">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Shield className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-green-800 text-lg mb-2">✨ Your Professional Image is Ready!</h3>
-                  <p className="text-sm text-green-700 mb-4 leading-relaxed">
-                    Enhanced with <span className="font-semibold">{backgroundOptions.find(b => b.value === backgroundType)?.label}</span> background 
-                    at <span className="font-semibold">{imageSize}</span> resolution. Optimized for Shopify with professional lighting, 
-                    color enhancement, and crystal-clear sharpening.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
-                      <Sparkles className="h-3 w-3" />
-                      Professional Lighting
-                    </span>
-                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
-                      <Palette className="h-3 w-3" />
-                      Color Enhanced
-                    </span>
-                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium">
-                      <Zap className="h-3 w-3" />
-                      HD Sharpened
-                    </span>
-                  </div>
-                </div>
-                <Button 
-                  onClick={downloadImage}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
-                  size="lg"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Pro Image
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Enhanced Tips Card */}
-      <Card className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-blue-800 flex items-center gap-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Settings className="h-5 w-5 text-blue-600" />
-            </div>
-            Professional Enhancement Tips
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-blue-700">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-semibold text-sm">Studio White</p>
-                  <p className="text-xs text-blue-600">Perfect for most products, provides clean professional look</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-semibold text-sm">Premium Gradient</p>
-                  <p className="text-xs text-blue-600">Adds subtle depth and premium feel to your products</p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-semibold text-sm">2048×2048 Resolution</p>
-                  <p className="text-xs text-blue-600">Recommended size for Shopify with zoom functionality</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="font-semibold text-sm">Transparent PNG</p>
-                  <p className="text-xs text-blue-600">Ideal for products that need to overlay on different backgrounds</p>
-                </div>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
