@@ -210,7 +210,25 @@ export const reimagineProductImage = async (imageUrl: string, apiKey: string): P
       },
       body: JSON.stringify({
         model: 'dall-e-3',
-        prompt: `Reimagine this ${productDescription} into a more customer-friendly image to be put on sale. Create a professional, appealing product photo with perfect lighting, clean composition, and customer appeal. Focus on making it look premium, desirable, and ready for e-commerce. Use professional product photography techniques with soft shadows and attractive presentation.`,
+        prompt: `You are an expert image enhancer and product photographer.
+Carefully enhance the following image with the following strict instructions:
+
+[original_image]
+${productDescription}
+
+[enhancement_instructions]
+
+Preserve the product exactly — its shape, color, shadows, and position must not be altered or stylized.
+
+Remove the current background and replace it with a clean, studio-quality white background.
+
+Adjust lighting and shadows to make the product look professionally lit — soft shadows under the product, light source from top-left.
+
+Improve image clarity — enhance sharpness, contrast, and color balance to bring out the product's natural colors and materials.
+
+Add slight soft reflections below the product on the white surface if appropriate, to simulate a real product studio setup.
+
+Avoid artificial textures, props, logos, or any object additions.`,
         n: 1,
         size: '1024x1024',
         quality: 'hd',
