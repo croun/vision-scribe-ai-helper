@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Crop, Download, RotateCcw, Sparkles, Plus } from 'lucide-react';
+import { Crop, RotateCcw, Sparkles, Plus } from 'lucide-react';
 import { ImageEnhancer } from './ImageEnhancer';
 
 interface CropData {
@@ -147,15 +147,6 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
     });
   }, []);
 
-  const downloadCroppedImage = useCallback((imageUrl: string, label: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `${label.replace(/\s+/g, '-').toLowerCase()}-${index + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }, []);
-
   const clearCroppedImages = useCallback(() => {
     croppedImages.forEach(item => URL.revokeObjectURL(item.url));
     setCroppedImages([]);
@@ -271,23 +262,15 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
                   <div className="text-xs text-center text-gray-600 truncate">
                     {item.label}
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      onClick={() => downloadCroppedImage(item.url, item.label, index)}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedImageForEnhancement({ url: item.url, label: item.label })}
-                    >
-                      <Sparkles className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedImageForEnhancement({ url: item.url, label: item.label })}
+                    className="w-full"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Enhance
+                  </Button>
                 </div>
               ))}
             </div>
