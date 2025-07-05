@@ -230,7 +230,7 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Upload & Analyze Product
+                  Upload Your Image
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -282,7 +282,7 @@ const Index = () => {
             {/* Detection Results */}
             <Card className="h-fit">
               <CardHeader>
-                <CardTitle>Product Analysis Results</CardTitle>
+                <CardTitle>Analysis Results</CardTitle>
               </CardHeader>
               <CardContent>
                 {detectionResult ? (
@@ -316,7 +316,7 @@ const Index = () => {
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Wand2 className="h-6 w-6 text-blue-600" />
                   </div>
-                  AI Product Enhancement Pipeline
+                  Enhance Your Product
                   <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
                     <Sparkles className="h-3 w-3" />
                     AI POWERED
@@ -376,8 +376,8 @@ const Index = () => {
                               <Wand2 className="h-8 w-8 text-white" />
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-purple-700">Customer-Friendly</p>
-                              <p className="text-xs text-purple-500">AI-reimagined for sales</p>
+                              <p className="text-sm font-semibold text-purple-700">Enhanced Version</p>
+                              <p className="text-xs text-purple-500">Reimagined for sales</p>
                             </div>
                           </div>
                         )}
