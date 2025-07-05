@@ -1,10 +1,8 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Eye, Loader2, AlertCircle, Scissors, Download, Wand2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -274,34 +272,6 @@ const Index = () => {
                         console.log('Cropped product image created:', croppedUrl);
                       }}
                     />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Detection Results */}
-            <Card className="h-fit">
-              <CardHeader>
-                <CardTitle>Analysis Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {detectionResult ? (
-                  <Textarea
-                    value={detectionResult}
-                    readOnly
-                    className="min-h-[200px] resize-none"
-                    placeholder="Product analysis results will appear here..."
-                  />
-                ) : (
-                  <div className="min-h-[200px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                    {isAnalyzing ? (
-                      <div className="text-center space-y-2">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
-                        <p>Analyzing your product...</p>
-                      </div>
-                    ) : (
-                      <p>Upload a product image and click "Detect & Process Product" to see results</p>
-                    )}
                   </div>
                 )}
               </CardContent>
