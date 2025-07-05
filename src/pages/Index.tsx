@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,6 @@ import { ImageEnhancer } from '@/components/ImageEnhancer';
 import { reimagineProductImage } from '@/components/ImageEnhancer/imageUtils';
 
 const Index = () => {
-  const [apiKey, setApiKey] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [detectionResult, setDetectionResult] = useState('');
@@ -19,6 +19,9 @@ const Index = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [reimaginedUrl, setReimagineUrl] = useState<string>('');
   const [isReimagining, setIsReimagining] = useState(false);
+
+  // Get API key from environment variable
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -47,8 +50,8 @@ const Index = () => {
   };
 
   const handleReimagineProduct = async () => {
-    if (!apiKey.trim()) {
-      toast.error('Please enter your OpenAI API key first');
+    if (!apiKey?.trim()) {
+      toast.error('OpenAI API key not found in environment variables');
       return;
     }
 
@@ -104,8 +107,8 @@ const Index = () => {
   };
 
   const analyzeImage = async () => {
-    if (!apiKey.trim()) {
-      toast.error('Please enter your OpenAI API key');
+    if (!apiKey?.trim()) {
+      toast.error('OpenAI API key not found in environment variables');
       return;
     }
 
@@ -192,32 +195,24 @@ const Index = () => {
           </p>
         </div>
 
-        {/* API Key Input */}
+        {/* API Status Alert */}
         <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-blue-600" />
-              OpenAI API Configuration
+              OpenAI API Status
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">Enter your OpenAI API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="sk-..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="font-mono"
-              />
-              <Alert>
-                <AlertDescription>
-                  Your API key is only stored locally and never sent to our servers. 
-                  Get your key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">OpenAI's platform</a>.
-                </AlertDescription>
-              </Alert>
-            </div>
+            <Alert>
+              <AlertDescription>
+                {apiKey ? (
+                  <span className="text-green-600">✅ OpenAI API key is configured and ready to use!</span>
+                ) : (
+                  <span className="text-red-600">❌ OpenAI API key not found. Please check your environment variables.</span>
+                )}
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
 
@@ -245,7 +240,7 @@ const Index = () => {
 
                 <Button 
                   onClick={analyzeImage}
-                  disabled={!selectedImage || !apiKey.trim() || isAnalyzing}
+                  disabled={!selectedImage || !apiKey?.trim() || isAnalyzing}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                   size="lg"
                 >
@@ -356,7 +351,7 @@ const Index = () => {
                     <div className="space-y-2">
                       <Button 
                         onClick={handleReimagineProduct}
-                        disabled={isReimagining || !apiKey.trim() || !imagePreview}
+                        disabled={isReimagining || !apiKey?.trim() || !imagePreview}
                         className="w-full bg-purple-600 hover:bg-purple-700"
                         size="sm"
                       >
@@ -398,7 +393,6 @@ const Index = () => {
           </CardHeader>
           <CardContent className="text-green-700 space-y-2">
             <ol className="list-decimal list-inside space-y-2">
-              <li>Enter your OpenAI API key in the configuration section above</li>
               <li>Upload a product image file (JPG, PNG, etc.)</li>
               <li>Click "Detect & Process Product" to analyze and process the image</li>
               <li>Use the manual cropper to select specific areas of your product</li>
