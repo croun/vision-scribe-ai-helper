@@ -1,4 +1,5 @@
 
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -107,11 +108,6 @@ const Index = () => {
   };
 
   const analyzeImage = async () => {
-    if (!apiKey?.trim()) {
-      toast.error('OpenAI API key not found in environment variables');
-      return;
-    }
-
     if (!selectedImage) {
       toast.error('Please select an image to analyze');
       return;
@@ -122,6 +118,14 @@ const Index = () => {
 
     try {
       const base64Image = await convertImageToBase64(selectedImage);
+
+      // Use Vite env variable for OpenAI API key (for development only)
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      if (!apiKey) {
+        toast.error('OpenAI API key is not set in your environment variables.');
+        setIsAnalyzing(false);
+        return;
+      }
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
