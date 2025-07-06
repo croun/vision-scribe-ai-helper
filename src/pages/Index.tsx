@@ -191,16 +191,16 @@ const Index = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Eye className="h-8 w-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              AI Product Enhancement Studio
+              Productify
             </h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Upload product images, let AI analyze them, and create professional Shopify-ready images with advanced enhancement tools.
+            Upload your product, Crop, and create a professional image with advanced enhancement tools.
           </p>
         </div>
 
         {/* API Status Alert */}
-        <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
+        {/* <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-blue-600" />
@@ -218,7 +218,7 @@ const Index = () => {
               </AlertDescription>
             </Alert>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Image Upload and Analysis */}
@@ -256,7 +256,7 @@ const Index = () => {
                   ) : (
                     <>
                       <Eye className="h-4 w-4 mr-2" />
-                      Detect & Process Product
+                      Crop Image
                     </>
                   )}
                 </Button>
@@ -291,7 +291,7 @@ const Index = () => {
                     AI POWERED
                   </div>
                 </CardTitle>
-                <p className="text-sm text-blue-700 leading-relaxed">Reimagine your product into a more customer-friendly version</p>
+                <p className="text-sm text-blue-700 leading-relaxed">Reimagine your product with advanced image enhancement tools</p>
               </CardHeader>
               <CardContent className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -398,7 +398,7 @@ const Index = () => {
           <CardContent className="text-green-700 space-y-2">
             <ol className="list-decimal list-inside space-y-2">
               <li>Upload a product image file (JPG, PNG, etc.)</li>
-              <li>Click "Detect & Process Product" to analyze and process the image</li>
+              <li>Click "Crop" to specify the product</li>
               <li>Use the manual cropper to select specific areas of your product</li>
               <li>Enhance cropped objects using the AI enhancement tools</li>
               <li>Download your enhanced product images</li>
