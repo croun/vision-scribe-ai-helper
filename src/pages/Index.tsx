@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -134,7 +132,7 @@ const Index = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "gpt-4.1-2025-04-14",
+          model: "gpt-4o",
           messages: [
             {
               role: "user",
