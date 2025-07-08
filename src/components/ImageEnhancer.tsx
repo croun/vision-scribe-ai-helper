@@ -17,13 +17,15 @@ interface ImageEnhancerProps {
 export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhancedImage }: ImageEnhancerProps) => {
   const [reimaginedUrl, setReimagineUrl] = useState<string>('');
   const [isReimagining, setIsReimagining] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [showOriginalMagnify, setShowOriginalMagnify] = useState(false);
   const [showEnhancedMagnify, setShowEnhancedMagnify] = useState(false);
 
+  // Get API key from environment variable
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
   const handleReimagineProduct = async () => {
-    if (!apiKey.trim()) {
-      toast.error('Please enter your OpenAI API key first');
+    if (!apiKey?.trim()) {
+      toast.error('OpenAI API key not found in environment variables');
       return;
     }
 
@@ -77,7 +79,6 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
 
   const resetSettings = () => {
     setReimagineUrl('');
-    setApiKey('');
     toast.info('Reset completed', { duration: 2000 });
   };
 
@@ -164,27 +165,12 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
             </div>
           </div>
 
-          {/* API Key Input */}
-          <div className="bg-white/50 rounded-xl p-4 mb-6">
-            <div className="space-y-2">
-              <Label htmlFor="openai-key" className="text-sm font-medium text-gray-700">OpenAI API Key</Label>
-              <input
-                id="openai-key"
-                type="password"
-                placeholder="sk-..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
           {/* Reimagine Product Button */}
           <Button 
             onClick={handleReimagineProduct}
             size="lg"
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold h-12 mb-4"
-            disabled={isReimagining || !apiKey.trim()}
+            disabled={isReimagining || !apiKey?.trim()}
           >
             {isReimagining ? (
               <>
