@@ -19,6 +19,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
   const [isReimagining, setIsReimagining] = useState(false);
   const [showOriginalMagnify, setShowOriginalMagnify] = useState(false);
   const [showEnhancedMagnify, setShowEnhancedMagnify] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
   const [sliderPosition, setSliderPosition] = useState(50);
 
@@ -113,7 +114,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                   ORIGINAL
                 </div>
                 <button
-                  onClick={() => setShowOriginalMagnify(true)}
+                  onClick={() => reimaginedUrl ? setShowComparison(true) : setShowOriginalMagnify(true)}
                   className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <ZoomIn className="h-4 w-4" />
@@ -141,7 +142,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                         ENHANCED
                       </div>
                       <button
-                        onClick={() => setShowEnhancedMagnify(true)}
+                        onClick={() => setShowComparison(true)}
                         className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <ZoomIn className="h-4 w-4" />
@@ -166,97 +167,6 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
               </div>
             </div>
           </div>
-
-          {/* Before/After Comparison Slider - Only show when reimagined image exists */}
-          {reimaginedUrl && (
-            <div className="bg-white rounded-xl border-2 border-purple-300 p-4 mb-6">
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Before & After Comparison</h3>
-                <p className="text-sm text-gray-600">Drag the slider to compare original vs enhanced</p>
-              </div>
-              
-              <div className="relative w-full h-64 mx-auto overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100">
-                {/* Enhanced image (background) */}
-                <div className="absolute inset-0">
-                  <img 
-                    src={reimaginedUrl} 
-                    alt="Enhanced" 
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute top-2 right-2 bg-purple-600 text-white px-2 py-1 text-xs rounded font-semibold">
-                    ENHANCED
-                  </div>
-                </div>
-                
-                {/* Original image (foreground, clipped) */}
-                <div 
-                  className="absolute inset-0 overflow-hidden"
-                  style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
-                >
-                  <img 
-                    src={imageUrl} 
-                    alt="Original" 
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute top-2 left-2 bg-gray-800 text-white px-2 py-1 text-xs rounded font-semibold">
-                    ORIGINAL
-                  </div>
-                </div>
-                
-                {/* Slider handle */}
-                <div 
-                  className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize z-10"
-                  style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
-                >
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-300 flex items-center justify-center">
-                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                {/* Interactive overlay */}
-                <div 
-                  className="absolute inset-0 cursor-ew-resize"
-                  onMouseDown={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const updatePosition = (clientX: number) => {
-                      const x = ((clientX - rect.left) / rect.width) * 100;
-                      setSliderPosition(Math.max(0, Math.min(100, x)));
-                    };
-                    
-                    const handleMouseMove = (e: MouseEvent) => updatePosition(e.clientX);
-                    const handleMouseUp = () => {
-                      document.removeEventListener('mousemove', handleMouseMove);
-                      document.removeEventListener('mouseup', handleMouseUp);
-                    };
-                    
-                    updatePosition(e.clientX);
-                    document.addEventListener('mousemove', handleMouseMove);
-                    document.addEventListener('mouseup', handleMouseUp);
-                  }}
-                  onTouchStart={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const updatePosition = (clientX: number) => {
-                      const x = ((clientX - rect.left) / rect.width) * 100;
-                      setSliderPosition(Math.max(0, Math.min(100, x)));
-                    };
-                    
-                    const handleTouchMove = (e: TouchEvent) => {
-                      e.preventDefault();
-                      updatePosition(e.touches[0].clientX);
-                    };
-                    const handleTouchEnd = () => {
-                      document.removeEventListener('touchmove', handleTouchMove);
-                      document.removeEventListener('touchend', handleTouchEnd);
-                    };
-                    
-                    updatePosition(e.touches[0].clientX);
-                    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-                    document.addEventListener('touchend', handleTouchEnd);
-                  }}
-                />
-              </div>
-            </div>
-          )}
 
           {/* Custom Enhancement Instructions */}
           <div className="bg-white/50 rounded-xl p-4 mb-6">
@@ -355,6 +265,118 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
             >
               ✕
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Before & After Comparison Modal */}
+      {showComparison && reimaginedUrl && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowComparison(false)}>
+          <div className="max-w-6xl w-full max-h-[90vh] bg-white rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold">Before & After Comparison</h3>
+                  <p className="text-blue-100">Drag the slider to compare original vs enhanced</p>
+                </div>
+                <button
+                  onClick={() => setShowComparison(false)}
+                  className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="relative w-full h-96 mx-auto overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100">
+                {/* Enhanced image (background) */}
+                <div className="absolute inset-0">
+                  <img 
+                    src={reimaginedUrl} 
+                    alt="Enhanced" 
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute top-4 right-4 bg-purple-600 text-white px-3 py-2 text-sm rounded-lg font-semibold flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    ENHANCED
+                  </div>
+                </div>
+                
+                {/* Original image (foreground, clipped) */}
+                <div 
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+                >
+                  <img 
+                    src={imageUrl} 
+                    alt="Original" 
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute top-4 left-4 bg-gray-800 text-white px-3 py-2 text-sm rounded-lg font-semibold">
+                    ORIGINAL
+                  </div>
+                </div>
+                
+                {/* Slider handle */}
+                <div 
+                  className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize z-10"
+                  style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+                >
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full shadow-lg border-2 border-gray-300 flex items-center justify-center">
+                    <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                  </div>
+                </div>
+                
+                {/* Interactive overlay */}
+                <div 
+                  className="absolute inset-0 cursor-ew-resize"
+                  onMouseDown={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const updatePosition = (clientX: number) => {
+                      const x = ((clientX - rect.left) / rect.width) * 100;
+                      setSliderPosition(Math.max(0, Math.min(100, x)));
+                    };
+                    
+                    const handleMouseMove = (e: MouseEvent) => updatePosition(e.clientX);
+                    const handleMouseUp = () => {
+                      document.removeEventListener('mousemove', handleMouseMove);
+                      document.removeEventListener('mouseup', handleMouseUp);
+                    };
+                    
+                    updatePosition(e.clientX);
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
+                  }}
+                  onTouchStart={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const updatePosition = (clientX: number) => {
+                      const x = ((clientX - rect.left) / rect.width) * 100;
+                      setSliderPosition(Math.max(0, Math.min(100, x)));
+                    };
+                    
+                    const handleTouchMove = (e: TouchEvent) => {
+                      e.preventDefault();
+                      updatePosition(e.touches[0].clientX);
+                    };
+                    const handleTouchEnd = () => {
+                      document.removeEventListener('touchmove', handleTouchMove);
+                      document.removeEventListener('touchend', handleTouchEnd);
+                    };
+                    
+                    updatePosition(e.touches[0].clientX);
+                    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+                    document.addEventListener('touchend', handleTouchEnd);
+                  }}
+                />
+              </div>
+              
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-600">
+                  Slider position: {Math.round(sliderPosition)}% original, {Math.round(100 - sliderPosition)}% enhanced
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
