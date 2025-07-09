@@ -19,6 +19,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
   const [isReimagining, setIsReimagining] = useState(false);
   const [showOriginalMagnify, setShowOriginalMagnify] = useState(false);
   const [showEnhancedMagnify, setShowEnhancedMagnify] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
 
   // Get API key from environment variable
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -163,6 +164,24 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                 <p className="text-xs text-purple-500">Reimagined for sales</p>
               </div>
             </div>
+          </div>
+
+          {/* Custom Enhancement Instructions */}
+          <div className="bg-white/50 rounded-xl p-4 mb-6">
+            <Label htmlFor="custom-prompt" className="text-sm font-medium text-gray-700 mb-2 block">
+              Custom Enhancement Instructions (Optional)
+            </Label>
+            <textarea
+              id="custom-prompt"
+              placeholder="Describe specific changes you want for the enhanced version (e.g., 'make it look more luxurious', 'add vibrant colors', 'create a professional studio look')..."
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none h-20"
+              rows={3}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This will be added to the enhancement prompt to customize the output
+            </p>
           </div>
 
           {/* Reimagine Product Button */}

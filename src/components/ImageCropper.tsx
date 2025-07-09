@@ -170,17 +170,50 @@ export const ImageCropper = ({ imageUrl, detectionResult, onCropComplete }: Imag
           <div className="space-y-4">
             <div 
               ref={containerRef}
-              className="relative inline-block border-2 border-gray-200 rounded-lg overflow-hidden cursor-crosshair"
+              className="relative w-full max-w-2xl mx-auto border-2 border-gray-200 rounded-lg overflow-hidden cursor-crosshair bg-gray-50"
+              style={{ maxHeight: '500px' }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                const coords = getImageCoordinates(touch.clientX, touch.clientY);
+                setSelectionStart(coords);
+                setIsSelecting(true);
+                setCurrentSelection({ x: coords.x, y: coords.y, width: 0, height: 0 });
+              }}
+              onTouchMove={(e) => {
+                if (!isSelecting || !selectionStart || !imageRef.current) return;
+                e.preventDefault();
+                const touch = e.touches[0];
+                const coords = getImageCoordinates(touch.clientX, touch.clientY);
+                const width = coords.x - selectionStart.x;
+                const height = coords.y - selectionStart.y;
+                
+                setCurrentSelection({
+                  x: width < 0 ? coords.x : selectionStart.x,
+                  y: height < 0 ? coords.y : selectionStart.y,
+                  width: Math.abs(width),
+                  height: Math.abs(height)
+                });
+              }}
+              onTouchEnd={() => {
+                if (currentSelection && currentSelection.width > 10 && currentSelection.height > 10) {
+                  // Keep the selection for cropping
+                } else {
+                  setCurrentSelection(null);
+                }
+                setIsSelecting(false);
+                setSelectionStart(null);
+              }}
             >
               <img
                 ref={imageRef}
                 src={imageUrl}
                 alt="Source image for cropping"
-                className="max-w-full h-auto select-none"
+                className="w-full h-full object-contain select-none"
+                style={{ maxHeight: '500px' }}
                 draggable={false}
               />
               
