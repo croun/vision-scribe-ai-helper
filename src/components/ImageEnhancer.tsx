@@ -295,7 +295,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                   <img 
                     src={reimaginedUrl} 
                     alt="Enhanced" 
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover"
                   />
                   <div className="absolute top-4 right-4 bg-purple-600 text-white px-3 py-2 text-sm rounded-lg font-semibold flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
@@ -311,7 +311,7 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                   <img 
                     src={imageUrl} 
                     alt="Original" 
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover"
                   />
                   <div className="absolute top-4 left-4 bg-gray-800 text-white px-3 py-2 text-sm rounded-lg font-semibold">
                     ORIGINAL
