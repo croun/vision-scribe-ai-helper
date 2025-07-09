@@ -289,13 +289,13 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
             </div>
             
             <div className="p-6">
-              <div className="relative w-full h-96 mx-auto overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100">
+              <div className="relative w-full h-[600px] mx-auto overflow-hidden rounded-lg border-2 border-gray-200 bg-white">
                 {/* Enhanced image (background) */}
                 <div className="absolute inset-0">
                   <img 
                     src={reimaginedUrl} 
                     alt="Enhanced" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <div className="absolute top-4 right-4 bg-purple-600 text-white px-3 py-2 text-sm rounded-lg font-semibold flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
@@ -303,15 +303,15 @@ export const ImageEnhancer = ({ imageUrl, imageName, detectionResult, onEnhanced
                   </div>
                 </div>
                 
-                {/* Original image (foreground, clipped) */}
+                {/* Original image (foreground, clipped) with white background */}
                 <div 
-                  className="absolute inset-0 overflow-hidden"
+                  className="absolute inset-0 overflow-hidden bg-white"
                   style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
                 >
                   <img 
                     src={imageUrl} 
                     alt="Original" 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                   <div className="absolute top-4 left-4 bg-gray-800 text-white px-3 py-2 text-sm rounded-lg font-semibold">
                     ORIGINAL
