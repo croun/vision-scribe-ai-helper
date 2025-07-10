@@ -8,6 +8,7 @@ import { Upload, Eye, Loader2, AlertCircle, Scissors, Download, Wand2, Sparkles 
 import { toast } from 'sonner';
 import { ImageCropper } from '@/components/ImageCropper';
 import { ImageEnhancer } from '@/components/ImageEnhancer';
+import { LoginForm } from '@/components/LoginForm';
 import { reimagineProductImage } from '@/components/ImageEnhancer/imageUtils';
 
 const Index = () => {
@@ -18,6 +19,12 @@ const Index = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [reimaginedUrl, setReimagineUrl] = useState<string>('');
   const [isReimagining, setIsReimagining] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+
+  // Show login form if requested
+  if (showLogin) {
+    return <LoginForm />;
+  }
 
   // Get API key from environment variable
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -186,11 +193,20 @@ const Index = () => {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center py-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Eye className="h-8 w-8 text-blue-600" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Productify
-            </h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Eye className="h-8 w-8 text-blue-600" />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Productify
+              </h1>
+            </div>
+            <Button 
+              onClick={() => setShowLogin(true)}
+              variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-50"
+            >
+              Login
+            </Button>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Upload your product, Crop, and create a professional image with advanced enhancement tools.
