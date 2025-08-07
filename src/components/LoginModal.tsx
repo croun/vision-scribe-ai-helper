@@ -1,8 +1,7 @@
-// src/components/LoginModal.tsx
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { LoginForm } from '@/components/LoginForm';
-import { RegistrationForm } from '@/components/RegistrationForm';
+import { RegistrationForm} from '@/components/RegistrationForm';
 import { X } from 'lucide-react';
 
 interface LoginModalProps {
@@ -10,6 +9,10 @@ interface LoginModalProps {
   onClose: () => void;
   onSuccess?: () => void; // Made optional
   redirectPath?: string; // Made optional to match usage
+}
+interface RegistrationFormProps {
+  onSuccess?: () => void
+  redirectPath?: string
 }
 
 export const LoginModal = ({ show, onClose, onSuccess, redirectPath }: LoginModalProps) => {
