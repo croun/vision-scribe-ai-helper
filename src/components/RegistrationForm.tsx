@@ -48,12 +48,12 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+    <div className="w-full">
+      <div className="w-full max-w-md mx-auto">
+        <div className="bg-transparent p-6">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-gray-800 mb-2">
+            <h1 className="text-2xl font-semibold text-white mb-2">
               Create your account
             </h1>
             <p className="text-gray-600 text-sm">Join our community today</p>
@@ -63,7 +63,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="firstName" className="text-gray-700 text-sm font-medium mb-2 block">
+                <Label htmlFor="firstName" className="text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2 block">
                   First Name *
                 </Label>
                 <Input
@@ -75,7 +75,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
                 />
               </div>
               <div>
-                <Label htmlFor="lastName" className="text-gray-700 text-sm font-medium mb-2 block">
+                <Label htmlFor="lastName" className="text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2 block">
                   Last Name *
                 </Label>
                 <Input
@@ -89,7 +89,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
             </div>
 
             <div>
-              <Label htmlFor="username" className="text-gray-700 text-sm font-medium mb-2 block">
+              <Label htmlFor="username" className="text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2 block">
                 Username *
               </Label>
               <Input
@@ -102,7 +102,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
             </div>
 
             <div>
-              <Label htmlFor="email" className="text-gray-700 text-sm font-medium mb-2 block">
+              <Label htmlFor="email" className="text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2 block">
                 Email *
               </Label>
               <Input
@@ -115,7 +115,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-gray-700 text-sm font-medium mb-2 block">
+              <Label htmlFor="password" className="text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2 block">
                 Password *
               </Label>
               <div className="relative">
@@ -138,7 +138,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, r
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword" className="text-gray-700 text-sm font-medium mb-2 block">
+              <Label htmlFor="confirmPassword" className="text-[#b9bbbe] text-xs font-semibold uppercase tracking-wide mb-2 block">
                 Confirm Password *
               </Label>
               <div className="relative">
