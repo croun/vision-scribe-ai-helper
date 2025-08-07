@@ -8,7 +8,6 @@ import { Upload, Eye, Loader2, AlertCircle, Scissors, Download, Wand2, Sparkles 
 import { toast } from 'sonner';
 import { ImageCropper } from '@/components/ImageCropper';
 import { ImageEnhancer } from '@/components/ImageEnhancer';
-import { LoginForm } from '@/components/LoginForm';
 import { reimagineProductImage } from '@/components/ImageEnhancer/imageUtils';
 
 const Index = () => {
@@ -19,12 +18,6 @@ const Index = () => {
   const [showCropper, setShowCropper] = useState(false);
   const [reimaginedUrl, setReimagineUrl] = useState<string>('');
   const [isReimagining, setIsReimagining] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-
-  // Show login form if requested
-  if (showLogin) {
-    return <LoginForm />;
-  }
 
   // Get API key from environment variable
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -139,7 +132,7 @@ const Index = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4.1-2025-04-14",
           messages: [
             {
               role: "user",
@@ -193,27 +186,39 @@ const Index = () => {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center py-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Eye className="h-8 w-8 text-blue-600" />
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Productify
-              </h1>
-            </div>
-            <Button 
-              onClick={() => setShowLogin(true)}
-              variant="outline"
-              className="border-blue-300 text-blue-700 hover:bg-blue-50"
-            >
-              Login
-            </Button>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Eye className="h-8 w-8 text-blue-600" />
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Productify
+            </h1>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Upload your product, Crop, and create a professional image with advanced enhancement tools.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-1 gap-6">
+        {/* API Status Alert */}
+        {/* <Card className="border-2 border-dashed border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              OpenAI API Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>
+                {apiKey ? (
+                  <span className="text-green-600">✅ OpenAI API key is configured and ready to use!</span>
+                ) : (
+                  <span className="text-red-600">❌ OpenAI API key not found. Please check your environment variables.</span>
+                )}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card> */}
+
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Image Upload and Analysis */}
           <div className="space-y-6">
             <Card className="h-fit">
@@ -266,6 +271,118 @@ const Index = () => {
                     />
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Product Enhancement Pipeline - Simplified */}
+          <div className="space-y-6">
+            <Card className="border-2 border-blue-100 bg-gradient-to-br from-white via-blue-50/20 to-indigo-50/20 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-100">
+                <CardTitle className="text-xl flex items-center gap-3 text-blue-800">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Wand2 className="h-6 w-6 text-blue-600" />
+                  </div>
+                  Enhance Your Product
+                  <div className="ml-auto flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <Sparkles className="h-3 w-3" />
+                    AI POWERED
+                  </div>
+                </CardTitle>
+                <p className="text-sm text-blue-700 leading-relaxed">Reimagine your product with advanced image enhancement tools</p>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* Original Image */}
+                  <div className="space-y-4">
+                    <div className="relative group">
+                      {imagePreview ? (
+                        <>
+                          <img 
+                            src={imagePreview} 
+                            alt="Original" 
+                            className="w-full h-40 object-contain border-2 border-gray-200 rounded-xl bg-gray-50/50 transition-transform group-hover:scale-[1.02]"
+                          />
+                          <div className="absolute top-3 left-3 bg-gray-800 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
+                            ORIGINAL
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-40 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex items-center justify-center">
+                          <div className="text-center space-y-3">
+                            <Upload className="h-8 w-8 mx-auto text-gray-400" />
+                            <p className="text-sm text-gray-500">Upload an image first</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Your Product</p>
+                      <p className="text-xs text-gray-500">Starting point</p>
+                    </div>
+                  </div>
+
+                  {/* Reimagined Product */}
+                  <div className="space-y-4">
+                    <div className="relative group">
+                      <div className="w-full h-40 border-2 border-dashed border-purple-300 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center transition-all group-hover:border-purple-400">
+                        {reimaginedUrl ? (
+                          <>
+                            <img 
+                              src={reimaginedUrl} 
+                              alt="Reimagined" 
+                              className="w-full h-full object-contain rounded-xl transition-transform group-hover:scale-[1.02]"
+                            />
+                            <div className="absolute top-3 left-3 bg-purple-600 text-white px-3 py-1.5 text-xs rounded-lg font-semibold shadow-lg">
+                              REIMAGINED
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center space-y-3">
+                            <div className="w-16 h-16 mx-auto bg-purple-600 rounded-full flex items-center justify-center">
+                              <Wand2 className="h-8 w-8 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-purple-700">Enhanced Version</p>
+                              <p className="text-xs text-purple-500">Reimagined for sales</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={handleReimagineProduct}
+                        disabled={isReimagining || !apiKey?.trim() || !imagePreview}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                        size="sm"
+                      >
+                        {isReimagining ? (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                            Reimagining...
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="h-4 w-4 mr-2" />
+                            Reimagine Product
+                          </>
+                        )}
+                      </Button>
+                      {reimaginedUrl && (
+                        <Button 
+                          onClick={downloadReimagined}
+                          variant="outline"
+                          className="w-full"
+                          size="sm"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Reimagined
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
