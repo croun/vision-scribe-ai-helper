@@ -43,22 +43,17 @@ export const LoginForm = ({ onSuccess, redirectPath }: LoginFormProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#36393f] flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-[#2f3136] rounded-lg shadow-xl p-8">
+    <div className="w-full">
+      <div className="w-full max-w-md mx-auto">
+        <div className="bg-transparent p-6">
           {/* Header */}
           <div className="text-center mb-8">
-<<<<<<< HEAD
             <h1 className="text-2xl font-semibold text-white mb-2">
-              Welcome to Productify!
+              Welcome back!
             </h1>
             <p className="text-[#b9bbbe] text-sm">
-              Re-imagine the possibility your product can have.
+              We're so excited to see you again!
             </p>
-=======
-            <h1 className="text-2xl font-semibold text-white mb-2">Welcome back!</h1>
-            <p className="text-[#b9bbbe] text-sm">We're so excited to see you again!</p>
->>>>>>> ellema
           </div>
 
           {/* Form */}
@@ -72,7 +67,7 @@ export const LoginForm = ({ onSuccess, redirectPath }: LoginFormProps) => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-[#202225] border-none text-white placeholder-[#72767d] focus:ring-2 focus:ring-[#5865f2] h-10"
+                className="bg-[#3c3f45] border border-[#4a4d52] text-white placeholder-[#72767d] focus:ring-2 focus:ring-[#5865f2] h-10"
                 required
               />
             </div>
@@ -87,7 +82,7 @@ export const LoginForm = ({ onSuccess, redirectPath }: LoginFormProps) => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-[#202225] border-none text-white placeholder-[#72767d] focus:ring-2 focus:ring-[#5865f2] h-10 pr-10"
+                  className="bg-[#3c3f45] border border-[#4a4d52] text-white placeholder-[#72767d] focus:ring-2 focus:ring-[#5865f2] h-10 pr-10"
                   required
                 />
                 <button
@@ -113,37 +108,8 @@ export const LoginForm = ({ onSuccess, redirectPath }: LoginFormProps) => {
             >
               {isLoading ? 'Logging in...' : 'Log In'}
             </Button>
-
-            <div className="text-sm text-[#b9bbbe]">
-              Need an account?{' '}
-              <button type="button" className="text-[#00a8fc] hover:underline">
-                Register
-              </button>
-            </div>
           </form>
         </div>
-
-<<<<<<< HEAD
-        {/* Footer */}
-        {/* <div className="text-center mt-6">
-          <p className="text-[#b9bbbe] text-xs">
-            By logging in, you agree to Productify's{' '}
-            <button className="text-[#00a8fc] hover:underline">
-              Terms of Service
-            </button>{' '}
-            and{' '}
-            <button className="text-[#00a8fc] hover:underline">
-              Privacy Policy
-            </button>
-=======
-        <div className="text-center mt-6">
-          <p className="text-[#b9bbbe] text-xs">
-            By logging in, you agree to Discord's{' '}
-            <button className="text-[#00a8fc] hover:underline">Terms of Service</button> and{' '}
-            <button className="text-[#00a8fc] hover:underline">Privacy Policy</button>
->>>>>>> ellema
-          </p>
-        </div> */}
       </div>
     </div>
   );

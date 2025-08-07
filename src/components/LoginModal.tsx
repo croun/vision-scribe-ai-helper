@@ -24,10 +24,10 @@ export const LoginModal = ({ show, onClose, onSuccess, redirectPath }: LoginModa
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-md relative">
+      <div className="bg-[#2f3136] rounded-lg w-full max-w-md relative border-none shadow-xl">
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+          className="absolute top-4 right-4 text-[#b9bbbe] hover:text-white transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
@@ -43,7 +43,7 @@ export const LoginModal = ({ show, onClose, onSuccess, redirectPath }: LoginModa
                 Don't have an account?{' '}
                 <button 
                   onClick={() => setIsLogin(false)}
-                  className="text-blue-600 hover:underline"
+                  className="text-[#00a8fc] hover:underline"
                 >
                   Register
                 </button>
@@ -59,7 +59,7 @@ export const LoginModal = ({ show, onClose, onSuccess, redirectPath }: LoginModa
                 Already have an account?{' '}
                 <button 
                   onClick={() => setIsLogin(true)}
-                  className="text-blue-600 hover:underline"
+                  className="text-[#00a8fc] hover:underline"
                 >
                   Login
                 </button>
